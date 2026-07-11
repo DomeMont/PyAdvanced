@@ -11,16 +11,17 @@ date    = 10/07/2026
 # Highlight them or show them in writing
 
 # OPTIONS
-# a) Be able to select them in the choosen format and go to them in the outliner, node window or attribute editor
-# b) Save the information of the system to be used later, either for recreating the system or for making comparitions
+# a) Be able to select them in the chosen format and go to them in the outliner, node window or attribute editor
+# b) Save the information of the system to be used later
+#		Either recreate the rigging system or make comparisons with this information
 
 # Extra idea
 # For loop in joints and controls to look for:
 # - Incorrect orientations: 
-#		That joints are oriented to their child and that controls are alignet to their respective joints
+#		That joints are oriented to their child and that controls are aligned to their respective joints
 # - Double transformations:
 #		Look for overlapping constraints or connections
-# - Lack of frozen transformation in gepmetry
+# - Lack of frozen transformation in geometry
 #
 # Look for unused nodes
 # Choose to delete or keep them
