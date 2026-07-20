@@ -4,41 +4,28 @@ course  = Python Advanced
  
 date    = 14.11.2025
 email   = contact@alexanderrichtertd.com
+
+modified by = Domenica Montesdeoca
+date = 16/07/2026 
 """
 
-from maya import mel as mc
+from maya import cmds
 
-
-# COMMENT --------------------------------------------------
-# Not optimal
+# Replaced ifs statements with for loops
 def set_color(ctrlList=None, color=None):
+    colors = [4, 13, 25, 17, 17, 15, 6, 16]
 
-    for ctrlName in ctrlList:
-        try:
-            mc.setAttr(ctrlName + 'Shape.overrideEnabled', 1)
-        except:
-            pass
+    for ctrl in ctrlList:
+        print(ctrl)
+        cmds.setAttr(ctrl + 'Shape.overrideEnabled', 1)
 
-        try:
-            if color == 1:
-                mc.setAttr(ctrlName + 'Shape.overrideColor', 4)
-            elif color == 2:
-                mc.setAttr(ctrlName + 'Shape.overrideColor', 13)
-            elif color == 3:
-                mc.setAttr(ctrlName + 'Shape.overrideColor', 25)
-            elif color == 4:
-                mc.setAttr(ctrlName + 'Shape.overrideColor', 17)
-            elif color == 5:
-                mc.setAttr(ctrlName + 'Shape.overrideColor', 17)
-            elif color == 6:
-                mc.setAttr(ctrlName + 'Shape.overrideColor', 15)
-            elif color == 7:
-                mc.setAttr(ctrlName + 'Shape.overrideColor', 6)
-            elif color == 8:
-                mc.setAttr(ctrlName + 'Shape.overrideColor', 16)
-        except:
-            pass
-
+        for nr in range(len(colors)):
+            color = color - 1
+            if color == nr:
+                cmds.setAttr(ctrl + 'Shape.overrideColor', colors[nr])
 
 # EXAMPLE
 # set_color(['circle','circle1'], 8)
+
+# I left the same colors (numbers) that were in the original script,
+# even though there was a repeated number 
