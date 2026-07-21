@@ -224,37 +224,28 @@ class PickAPart:
     def create_skeleton(self, *args):
         cmds.select(deselect=True)
         self.joint_list = []
+
         for guide in self.guide_list[::-1]:
             guide_position = cmds.xform(guide, q=True, worldSpace=True, translation=True)
             jnt = cmds.joint(position=(guide_position[0], guide_position[1], guide_position[2]))
             self.joint_list.append(jnt)
         cmds.select(deselect=True)
 
-    def create_arm(self, custom_name, *args):
+    def create_arm(self, custom_name, part, *args):
         arm_sections = ['Shoulder', 'Elbow', 'Wrist', 'EndHand']
         arm_systems = ['','FK', 'IK']
         side = '_L'
-        prefix_jnts = 'jnt_'
+        prefix_jnts = 'jnt_' 
+        grp_guide = 'grp_Guides_' + str(part) + str(side)
 
+        self.guide_list = cmds.listRelatives(grp_guide, allDescendents=True, type="transform")
+        
         for nr_sys in range(len(arm_systems)):
             self.create_skeleton()
+            
             for nr in range(len(arm_sections)):
                 new_jnt_name = prefix_jnts + arm_systems[nr_sys] + arm_sections[nr] + custom_name + side
                 cmds.rename(self.joint_list[nr], new_jnt_name)
-  
-
-
-        cmds.group(self.joint_list, name='grp_')
-        # arm_systems = ['FK', 'IK']
-        # for nr in range(len(arm_systems)):
-        duplicate_chain = cmds.duplicate(self.joint_list[0])
-        duplicate_joints = cmds.listRelatives(duplicate_chain, allDescendents=True)
-        print('Duplicate Joints: ' + str(duplicate_joints))
-
-        for nr_jnt in range(len(duplicate_joints)):
-            new_jnt_name = duplicate_joints[nr_jnt].replace('jnt_', 'jnt_'+ str(arm_systems[nr]))
-            cmds.rename(duplicate_joints[nr], prefix_jnts + arm_sections[nr] + custom_name + side)
-
 
     def create_part(self, *args):
         self.get_items_hierarchy()
@@ -262,19 +253,11 @@ class PickAPart:
             if 'Arm' in part:
                 print('creating an arm')
                 custom_name = part.replace('Arm', '')
-                self.create_arm(custom_name)
-
-                
-
-
+                self.create_arm(custom_name, part)
 
     def create_rig(self, *args):
         print('Create rig')
         self.create_main_part()
-
-        for grp_guide in self.grp_guides_list:
-            self.guide_list = cmds.listRelatives(grp_guide, allDescendents=True, type="transform")
-
         self.create_part()
 
     def delete_rig(self, *args):
