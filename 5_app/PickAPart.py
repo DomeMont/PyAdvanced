@@ -133,6 +133,7 @@ class PickAPart:
     def add_to_hierarchy(self, part, *args):
         main_exists = cmds.treeView(self.hierarchy, q=True, itemExists=self.main_name)
         print(main_exists)
+
         if main_exists == 0:
             cmds.treeView(self.hierarchy, edit=True, addItem=(self.main_name, ''))
 
@@ -229,6 +230,7 @@ class PickAPart:
             guide_position = cmds.xform(guide, q=True, worldSpace=True, translation=True)
             jnt = cmds.joint(position=(guide_position[0], guide_position[1], guide_position[2]))
             self.joint_list.append(jnt)
+        cmds.joint(self.joint_list,e=True, orientJoint='xyz', secondaryAxisOrient='yup')
         # cmds.select(deselect=True)
 
     def create_arm(self, custom_name, part, *args):
@@ -238,35 +240,38 @@ class PickAPart:
         side = '_L'
          
         grp_guide  = 'grp_Guides_' + str(part) + str(side)
-        self.grp_joints = 'grp_Joints_' + str(part) + str(side)
+        grp_joints = 'grp_Joints_' + str(part) + str(side)
 
         self.guide_list = cmds.listRelatives(grp_guide, allDescendents=True, type="transform")
-        cmds.group(empty=True, name=self.grp_joints)
+        cmds.group(empty=True, name=grp_joints)
 
         for nr_sys in range(len(arm_systems)):
             self.create_skeleton()
-            cmds.parent(self.joint_list[0], self.grp_joints)
+            cmds.parent(self.joint_list[0], grp_joints)
             
             for nr in range(len(arm_sections)):
                 new_jnt_name = prefix_jnts + arm_systems[nr_sys] + arm_sections[nr] + custom_name + side
                 cmds.rename(self.joint_list[nr], new_jnt_name)
+
         self.create_arm_fk(custom_name, part)
     
     def create_arm_fk(self, custom_name, part, *args):
         self.grp_controlsFK = 'grp_controls_FK_' + str(part)
         grp_controls = cmds.group(empty=True, name=self.grp_controlsFK)
-        root_fk = 'jnt_FK_' + 'Shoulder' + custom_name + '_L'
-        previous_fk = None
+        root_FK = 'jnt_FK_Shoulder' + custom_name + '_L'
 
-        sys_jointsFK = cmds.listRelatives(root_fk,allDescendents=True)
-        sys_jointsFK.append(root_fk)
+        sys_jointsFK = cmds.listRelatives(root_FK,allDescendents=True)
+        sys_jointsFK.append(root_FK)
         sys_jointsFK.pop(0)
         # sys_jointsFK.reverse()
         print(sys_jointsFK)
 
         #Create a control under a group
         for nr_j in range(len(sys_jointsFK)):
-            control_name = cmds.circle(name=sys_jointsFK[nr_j].replace('jnt_', 'ctl_'), normal=(1, 0, 0), radius=5)
+            control_name = sys_jointsFK[nr_j].replace('jnt_', 'ctl_')
+            control_creation = cmds.circle(name=control_name, normal=(1, 0, 0), radius=5)
+            # cmds.delete(control_name, constructionHistory=True) 
+
             group_name = sys_jointsFK[nr_j].replace('jnt_', 'off_')
             cmds.group(control_name, name = group_name)
 
@@ -274,17 +279,35 @@ class PickAPart:
             cmds.parentConstraint(control_name, sys_jointsFK[nr_j], maintainOffset=True)
             
             cmds.parent(cmds.ls(sl=True), self.grp_controlsFK)
-            cmds.delete(control_name, constructionHistory=True)
         # cmds.parent(self.grp_controlsFK, self.main_grp)
-
         fk_offsets = cmds.listRelatives(self.grp_controlsFK, children=True, type='transform')
+
         for nr_off in range(len(fk_offsets[:-1])):
             fk_control = cmds.listRelatives(fk_offsets[nr_off+1], children=True, type='transform')
             cmds.parent(fk_offsets[nr_off], fk_control)
 
+        # STRETCH FK
+        off_elbowFK = 'off_FK_Elbow' + custom_name + '_L'
+        off_wristFK = 'off_FK_Wrist' + custom_name + '_L'
+        offs_FK = [str(off_elbowFK), str(off_wristFK)]
+
+        for off_FK in offs_FK:
+            ctrl_stretchFK = cmds.listRelatives(off_FK, parent=True, type='transform')[0]
+            cmds.addAttr(ctrl_stretchFK, longName='Stretch', attributeType='float', defaultValue=1, 
+                         minValue=1, maxValue=100, keyable=True)
+
+            base_stretch = cmds.getAttr(str(off_FK) + '.translateX')
+
+            mlt_UpperArmStretch_FK = "mlt_" + str(ctrl_stretchFK) + "Stretch"
+            cmds.createNode("multiplyDivide", n=mlt_UpperArmStretch_FK)
+
+            cmds.connectAttr(str(ctrl_stretchFK) + '.Stretch', str(mlt_UpperArmStretch_FK) + '.input1X')
+            cmds.setAttr(str(mlt_UpperArmStretch_FK) + '.input2X', base_stretch)
+            cmds.connectAttr(str(mlt_UpperArmStretch_FK) + '.outputX', str(off_FK) + '.translateX')
 
     def create_part(self, *args):
         self.get_items_hierarchy()
+
         for part in self.all_parts:
             if 'Arm' in part:
                 print('creating an arm')
@@ -313,10 +336,6 @@ class PickAPart:
                 self.delete_guides()
             elif step==' rig':
                 self.delete_rig()
-
-
-
-
 
 
 def start():
