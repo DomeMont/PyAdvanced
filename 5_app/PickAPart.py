@@ -188,7 +188,7 @@ class PickAPart:
             previous_loc = None
 
         print('grp guides: ' + str(self.grp_guides_list))
-        self.grp_guides = cmds.group( em=True, name='grp_GUIDES' )
+        self.grp_guides = cmds.group( empty=True, name='grp_GUIDES' )
         cmds.parent(self.grp_guides_list, self.grp_guides)
                   
     def delete_guides(self, *args):
@@ -197,8 +197,8 @@ class PickAPart:
 
     def create_main_part(self, *args):
         ctrl_global = 'ctl_Global_C'
-        ctrl_main = 'ctl_Main_C'
-        main_ctrls = [ctrl_global, ctrl_main]
+        ctrl_main   = 'ctl_Main_C'
+        main_ctrls  = [ctrl_global, ctrl_main]
         grp_main_ctrls = []
         size = 100 # cm
 
@@ -211,7 +211,7 @@ class PickAPart:
         cmds.setAttr(ctrl_main + 'Shape' + '.overrideColor', 18)
             
         for main_ctrl in main_ctrls:
-            cmds.delete(main_ctrl, ch=True)
+            cmds.delete(main_ctrl, constructionHistory=True)
             grp_main_ctrl = main_ctrl.replace('ctl_', 'grp_')
             cmds.group(main_ctrl, name=grp_main_ctrl)
             grp_main_ctrls.append(grp_main_ctrl)
@@ -229,23 +229,59 @@ class PickAPart:
             guide_position = cmds.xform(guide, q=True, worldSpace=True, translation=True)
             jnt = cmds.joint(position=(guide_position[0], guide_position[1], guide_position[2]))
             self.joint_list.append(jnt)
-        cmds.select(deselect=True)
+        # cmds.select(deselect=True)
 
     def create_arm(self, custom_name, part, *args):
         arm_sections = ['Shoulder', 'Elbow', 'Wrist', 'EndHand']
-        arm_systems = ['','FK', 'IK']
+        arm_systems  = ['','FK_', 'IK_']
+        prefix_jnts  = 'jnt_'
         side = '_L'
-        prefix_jnts = 'jnt_' 
-        grp_guide = 'grp_Guides_' + str(part) + str(side)
+         
+        grp_guide  = 'grp_Guides_' + str(part) + str(side)
+        self.grp_joints = 'grp_Joints_' + str(part) + str(side)
 
         self.guide_list = cmds.listRelatives(grp_guide, allDescendents=True, type="transform")
-        
+        cmds.group(empty=True, name=self.grp_joints)
+
         for nr_sys in range(len(arm_systems)):
             self.create_skeleton()
+            cmds.parent(self.joint_list[0], self.grp_joints)
             
             for nr in range(len(arm_sections)):
                 new_jnt_name = prefix_jnts + arm_systems[nr_sys] + arm_sections[nr] + custom_name + side
                 cmds.rename(self.joint_list[nr], new_jnt_name)
+        self.create_arm_fk(custom_name, part)
+    
+    def create_arm_fk(self, custom_name, part, *args):
+        self.grp_controlsFK = 'grp_controls_FK_' + str(part)
+        grp_controls = cmds.group(empty=True, name=self.grp_controlsFK)
+        root_fk = 'jnt_FK_' + 'Shoulder' + custom_name + '_L'
+        previous_fk = None
+
+        sys_jointsFK = cmds.listRelatives(root_fk,allDescendents=True)
+        sys_jointsFK.append(root_fk)
+        sys_jointsFK.pop(0)
+        # sys_jointsFK.reverse()
+        print(sys_jointsFK)
+
+        #Create a control under a group
+        for nr_j in range(len(sys_jointsFK)):
+            control_name = cmds.circle(name=sys_jointsFK[nr_j].replace('jnt_', 'ctl_'), normal=(1, 0, 0), radius=5)
+            group_name = sys_jointsFK[nr_j].replace('jnt_', 'off_')
+            cmds.group(control_name, name = group_name)
+
+            cmds.matchTransform(group_name, sys_jointsFK[nr_j])
+            cmds.parentConstraint(control_name, sys_jointsFK[nr_j], maintainOffset=True)
+            
+            cmds.parent(cmds.ls(sl=True), self.grp_controlsFK)
+            cmds.delete(control_name, constructionHistory=True)
+        # cmds.parent(self.grp_controlsFK, self.main_grp)
+
+        fk_offsets = cmds.listRelatives(self.grp_controlsFK, children=True, type='transform')
+        for nr_off in range(len(fk_offsets[:-1])):
+            fk_control = cmds.listRelatives(fk_offsets[nr_off+1], children=True, type='transform')
+            cmds.parent(fk_offsets[nr_off], fk_control)
+
 
     def create_part(self, *args):
         self.get_items_hierarchy()
