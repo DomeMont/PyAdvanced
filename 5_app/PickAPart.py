@@ -157,40 +157,50 @@ class PickAPart:
 
     def create_guides(self, *args):
         print('Create guides')
-        self.create_limb_guide()
-
-    
-    def create_limb_guide(self, *args):
-        nr_guides = 4
-        previous_loc = None
+        self.get_items_hierarchy()
         self.grp_guides_list = []
 
-        self.get_items_hierarchy()
-
-        for part in self.all_parts[1:]:
-            part_name = part
-            print(part_name)
-
-            for nr in range(nr_guides):
-                loc_name = 'guide_' + str(part_name) + str(nr+1) + '_L'
-                current_loc = cmds.spaceLocator(name=loc_name)[0]
-                cmds.setAttr(str(loc_name) + 'Shape'+ '.localScale', 5.0, 5.0, 5.0)
-                                
-                if previous_loc:
-                    cmds.parent(current_loc, previous_loc)
-                    cmds.setAttr(str(current_loc) + '.translateX', 10)
-                else:
-                    guide_grp_name = 'grp_Guides_' + part + '_L'
-                    cmds.group(current_loc, name=guide_grp_name, absolute=False)
-                    self.grp_guides_list.append(guide_grp_name)
-
-                previous_loc = current_loc
-
-            previous_loc = None
-
-        print('grp guides: ' + str(self.grp_guides_list))
+        for part in self.all_parts:
+            if 'Arm' in part:
+                print('creating an arm guide')
+                custom_name = part.replace('Arm', '')
+                self.create_limb_guide(part, nr_guides=4) 
+            elif 'Leg' in part:
+                print('creating a leg guide')
+                custom_name = part.replace('Leg', '')
+                self.create_limb_guide(part, nr_guides=4, tr=(0, -10, 0)) 
+        
         self.grp_guides = cmds.group( empty=True, name='grp_GUIDES' )
         cmds.parent(self.grp_guides_list, self.grp_guides)
+
+    
+    def create_limb_guide(self, part, nr_guides, tr=(10,0,0),*args):
+        previous_loc = None
+
+        for nr in range(nr_guides):
+            loc_name = 'guide_' + str(part) + str(nr+1) + '_L'
+            current_loc = cmds.spaceLocator(name=loc_name)[0]
+            cmds.setAttr(str(loc_name) + 'Shape'+ '.localScale', 5.0, 5.0, 5.0)
+                            
+            if previous_loc:
+                cmds.parent(current_loc, previous_loc)
+                cmds.setAttr(str(current_loc) + '.translate', tr[0], tr[1] ,tr[2])
+            else:
+                guide_grp_name = 'grp_Guides_' + part + '_L'
+                cmds.group(current_loc, name=guide_grp_name, absolute=False)
+                self.grp_guides_list.append(guide_grp_name)
+
+            previous_loc = current_loc
+
+        loc_poleV = 'guide_PoleVector_' + str(part) + '_L'
+        cmds.spaceLocator(name=loc_poleV)[0]
+        cmds.setAttr(str(loc_poleV) + 'Shape'+ '.localScale', 5.0, 5.0, 5.0)
+
+        cmds.parent(loc_poleV, guide_grp_name)
+
+
+        print('grp guides: ' + str(self.grp_guides_list))
+        
                   
     def delete_guides(self, *args):
         print('Delete guides')
@@ -237,41 +247,50 @@ class PickAPart:
 
         cmds.joint(self.joint_list,e=True, orientJoint='xyz', secondaryAxisOrient='yup')
         cmds.joint(self.joint_list[-1], e=True, orientJoint='none')
-
-    def create_arm(self, custom_name, part, *args):
-        self.arm_sections = ['Shoulder', 'Elbow', 'Wrist', 'EndHand']
-        self.arm_systems  = ['','FK_', 'IK_']
+      
+    def create_limb(self, custom_name, part, *args):
+        self.limb_sections = []
+        self.limb_systems  = ['','FK_', 'IK_']
         self.prefix_jnts  = 'jnt_'
         self.side = '_L'
+        
+        if 'Arm' in part:
+            self.limb_sections = ['Shoulder', 'Elbow', 'Wrist', 'EndHand']
+
+        elif 'Leg' in part:
+            self.limb_sections = ['Hip', 'Knee', 'Ankle', 'EndFoot']
          
         grp_guide  = 'grp_Guides_' + str(part) + str(self.side)
         grp_joints = 'grp_Joints_' + str(part) + str(self.side)
 
         self.guide_list = cmds.listRelatives(grp_guide, allDescendents=True, type="transform")
+        self.guide_poleV = self.guide_list[-1]
+        self.guide_list.pop(-1)
         cmds.group(empty=True, name=grp_joints)
 
-        for nr_sys in range(len(self.arm_systems)):
+        for nr_sys in range(len(self.limb_systems)):
             self.jnt_listIK = []
             self.create_skeleton()
             cmds.parent(self.joint_list[0], grp_joints)
             
-            for nr in range(len(self.arm_sections)):
-                new_jnt_name = self.prefix_jnts + self.arm_systems[nr_sys] + self.arm_sections[nr] + custom_name + self.side
+            for nr in range(len(self.limb_sections)):
+                new_jnt_name = self.prefix_jnts + self.limb_systems[nr_sys] + self.limb_sections[nr] + custom_name + self.side
                 cmds.rename(self.joint_list[nr], new_jnt_name)
                 self.jnt_listIK.append(new_jnt_name)
 
-        self.create_arm_fk(custom_name, part)
-        self.create_arm_ik(custom_name, part)
+        self.create_limb_fk(custom_name, part)
+        self.create_limb_ik(custom_name, part)
         self.fkik_blend(custom_name, part)
+
         # self.create_custom_controls('cube', 'ctl_cubeTest')
         # self.create_custom_controls('cone', 'ctl_coneTest')
         # self.create_custom_controls('lever', 'ctl_leverTest')
         # self.create_custom_controls('sphere', 'ctl_sphereTest')
     
-    def create_arm_fk(self, custom_name, part, *args):
+    def create_limb_fk(self, custom_name, part, *args):
         self.grp_controlsFK = 'grp_controls_FK_' + str(part)
         grp_controls = cmds.group(empty=True, name=self.grp_controlsFK)
-        root_FK = 'jnt_FK_Shoulder' + custom_name + self.side
+        root_FK = 'jnt_FK_' + self.limb_sections[0] + custom_name + self.side
 
         sys_jointsFK = cmds.listRelatives(root_FK,allDescendents=True)
         sys_jointsFK.append(root_FK)
@@ -303,9 +322,9 @@ class PickAPart:
         cmds.parent(self.grp_controlsFK, self.ctrl_main)
 
         # STRETCH FK
-        off_elbowFK = 'off_FK_Elbow' + custom_name + self.side
-        off_wristFK = 'off_FK_Wrist' + custom_name + self.side
-        offs_FK = [str(off_elbowFK), str(off_wristFK)]
+        off_midFK = 'off_FK_' + self.limb_sections[1] + custom_name + self.side
+        off_endFK = 'off_FK_' + self.limb_sections[2] + custom_name + self.side
+        offs_FK = [str(off_midFK), str(off_endFK)]
 
         for off_FK in offs_FK:
             ctrl_stretchFK = cmds.listRelatives(off_FK, parent=True, type='transform')[0]
@@ -321,14 +340,14 @@ class PickAPart:
             cmds.setAttr(str(mlt_UpperArmStretch_FK) + '.input2X', base_stretch)
             cmds.connectAttr(str(mlt_UpperArmStretch_FK) + '.outputX', str(off_FK) + '.translateX')
 
-    def create_arm_ik(self, custom_name, part, *args):
+    def create_limb_ik(self, custom_name, part, *args):
         self.grp_controlsIK = 'grp_controls_IK_' + str(part)
         grp_controls = cmds.group(empty=True, name=self.grp_controlsIK)
         
-        ctrl_baseIK = 'ctl_ShoulderIK' + custom_name + 'Base' + self.side
-        ctrl_poleIK = 'ctl_' + custom_name + 'PoleVector' + self.side
-        ctrl_endIK  = 'ctl_HandIK' + custom_name + self.side
-        ctrl_rotIK  = 'ctl_HandIKRot' + custom_name + self.side
+        ctrl_baseIK = 'ctl_IK' + self.limb_sections[0] + custom_name + 'Base' + self.side
+        ctrl_poleIK = 'ctl_' + part + 'PoleVector' + self.side
+        ctrl_endIK  = 'ctl_IK' + self.limb_sections[2] + custom_name + self.side
+        ctrl_rotIK  = 'ctl_IKRot' + self.limb_sections[2] + custom_name + self.side
         ctrls_limbIK = [ctrl_baseIK, ctrl_poleIK, ctrl_endIK, ctrl_rotIK]
         
         off_baseIK = ctrl_baseIK.replace('ctl_', 'off_')
@@ -343,21 +362,16 @@ class PickAPart:
         # Create controls 
         self.create_custom_controls('lever', ctrl_baseIK, 4)
         self.create_custom_controls('cone', ctrl_poleIK, 4)
-        cmds.setAttr(str(ctrl_poleIK) + '.rx',90)
-        cmds.makeIdentity(ctrl_poleIK, apply=True )
         self.create_custom_controls('cube', ctrl_endIK, 4)
         self.create_custom_controls('sphere', ctrl_rotIK, 4)
 
         for nr in range(len(ctrls_limbIK)):
             cmds.matchTransform(offs_limbIK[nr], self.jnt_listIK[nr])
-
+        print('*****match*****')
+        print(self.guide_poleV)
         cmds.matchTransform(off_rotIK, self.jnt_listIK[2])
+        cmds.matchTransform(off_poleIK, self.guide_poleV)
 
-        off_baseIK = ctrl_baseIK.replace('ctl_', 'off_')
-        off_poleIK = ctrl_poleIK.replace('ctl_', 'off_')
-        off_endIK  = ctrl_endIK.replace('ctl_', 'off_')
-
-        cmds.setAttr(str(off_poleIK) + '.translateZ', -20)
         cmds.parent(off_poleIK, ctrl_endIK)
         cmds.parent(off_baseIK, off_endIK, self.grp_controlsIK)
         cmds.parent(self.grp_controlsIK, self.ctrl_main)
@@ -402,8 +416,8 @@ class PickAPart:
         print('skeleton FK:' + str(jnt_skeleton_FK))
         print('skeleton IK:' + str(jnt_skeleton_IK))
 
-        name = custom_name
-        ctl_switch_name = 'ctl_IKFK' + name
+        name = part + custom_name
+        ctl_switch_name = 'ctl_IKFK_' + name
         ctl_switch = self.create_custom_controls('cube', ctl_switch_name, 3)
 
         cmds.makeIdentity(ctl_switch_name, apply=True)
@@ -543,7 +557,11 @@ class PickAPart:
             if 'Arm' in part:
                 print('creating an arm')
                 custom_name = part.replace('Arm', '')
-                self.create_arm(custom_name, part)
+                self.create_limb(custom_name, part)
+            elif 'Leg' in part:
+                print('creating a leg')
+                custom_name = part.replace('Leg', '')
+                self.create_limb(custom_name, part) 
 
     def create_rig(self, *args):
         print('Create rig')
