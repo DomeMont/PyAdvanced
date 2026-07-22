@@ -121,23 +121,23 @@ class PickAPart:
     def add_part(self, *args):
         current_part = cmds.optionMenuGrp(self.part_select, q=True, value=True)
         print('Added: ' + str(current_part))
-        self.main_name = cmds.textField(self.grp_name_text, q=True, text=True)
+        self.MAIN_NAME = cmds.textField(self.grp_name_text, q=True, text=True)
 
-        if not self.main_name:
-            self.main_name = 'Main'
+        if not self.MAIN_NAME:
+            self.MAIN_NAME = 'Main'
 
-        print(self.main_name)
+        print(self.MAIN_NAME)
 
         self.add_to_hierarchy(part=current_part)
 
     def add_to_hierarchy(self, part, *args):
-        main_exists = cmds.treeView(self.hierarchy, q=True, itemExists=self.main_name)
+        main_exists = cmds.treeView(self.hierarchy, q=True, itemExists=self.MAIN_NAME)
         print(main_exists)
 
         if main_exists == 0:
-            cmds.treeView(self.hierarchy, edit=True, addItem=(self.main_name, ''))
+            cmds.treeView(self.hierarchy, edit=True, addItem=(self.MAIN_NAME, ''))
 
-        cmds.treeView(self.hierarchy, edit=True, addItem=(part, self.main_name))
+        cmds.treeView(self.hierarchy, edit=True, addItem=(part, self.MAIN_NAME))
 
     def get_items_hierarchy(self, *args):
         parts = cmds.treeView(self.hierarchy, q=True, children='')    
@@ -209,21 +209,21 @@ class PickAPart:
     def create_main_part(self, *args):
         # Pendiente usar el nombre del input
         # main_grp_name  = cmds.textField(self.main_grp_name, query = True, text=True)
-        ctrl_global    = 'ctl_Global_C'
-        self.ctrl_main = 'ctl_Main_C'
-        
-        
-        main_ctrls  = [ctrl_global, self.ctrl_main]
+        self.GRP_ALL = 'grp_' + self.MAIN_NAME
+        CTRL_GLOBAL    = 'ctl_Global_C'
+        self.CTRL_MAIN = 'ctl_Main_C'
+                
+        main_ctrls  = [CTRL_GLOBAL, self.CTRL_MAIN]
         grp_main_ctrls = []
         size = 100 # cm
 
-        cmds.circle(name=ctrl_global, normal=(0, 1, 0), radius=size*0.75)
-        cmds.circle(name=self.ctrl_main, normal=(0, 1, 0), radius=size*0.65)
+        cmds.circle(name=CTRL_GLOBAL, normal=(0, 1, 0), radius=size*0.75)
+        cmds.circle(name=self.CTRL_MAIN, normal=(0, 1, 0), radius=size*0.65)
 
         for main_ctrl in main_ctrls: cmds.setAttr(main_ctrl + 'Shape' + '.overrideEnabled', 1)
         
-        cmds.setAttr(ctrl_global + 'Shape' + '.overrideColor', 17)
-        cmds.setAttr(self.ctrl_main + 'Shape' + '.overrideColor', 18)
+        cmds.setAttr(CTRL_GLOBAL + 'Shape' + '.overrideColor', 17)
+        cmds.setAttr(self.CTRL_MAIN + 'Shape' + '.overrideColor', 18)
             
         for main_ctrl in main_ctrls:
             cmds.delete(main_ctrl, constructionHistory=True)
@@ -231,12 +231,13 @@ class PickAPart:
             cmds.group(main_ctrl, name=grp_main_ctrl)
             grp_main_ctrls.append(grp_main_ctrl)
         
-        cmds.parent(grp_main_ctrls[1], ctrl_global)
+        cmds.parent(grp_main_ctrls[1], CTRL_GLOBAL)
+        cmds.group(grp_main_ctrls[0], name = self.GRP_ALL)
 
-        cmds.addAttr(ctrl_global, longName='Global_Scale', attributeType='float', defaultValue=1, 
+        cmds.addAttr(CTRL_GLOBAL, longName='Global_Scale', attributeType='float', defaultValue=1, 
                      minValue=1, maxValue=100, keyable=True)
 
-    def create_skeleton(self, *args):
+    def create_skeleton(self, or_j, sec_axis, *args):
         cmds.select(deselect=True)
         self.joint_list = []
 
@@ -245,7 +246,7 @@ class PickAPart:
             jnt = cmds.joint(position=(guide_position[0], guide_position[1], guide_position[2]))
             self.joint_list.append(jnt)
 
-        cmds.joint(self.joint_list,e=True, orientJoint='xyz', secondaryAxisOrient='yup')
+        cmds.joint(self.joint_list,e=True, orientJoint=or_j, secondaryAxisOrient=sec_axis)
         cmds.joint(self.joint_list[-1], e=True, orientJoint='none')
       
     def create_limb(self, custom_name, part, *args):
@@ -256,9 +257,13 @@ class PickAPart:
         
         if 'Arm' in part:
             self.limb_sections = ['Shoulder', 'Elbow', 'Wrist', 'EndHand']
+            or_j ='xyz'
+            sec_axis = 'yup'
 
         elif 'Leg' in part:
             self.limb_sections = ['Hip', 'Knee', 'Ankle', 'EndFoot']
+            or_j = 'xyz' 
+            sec_axis = 'zup'
          
         grp_guide  = 'grp_Guides_' + str(part) + str(self.side)
         grp_joints = 'grp_Joints_' + str(part) + str(self.side)
@@ -270,7 +275,7 @@ class PickAPart:
 
         for nr_sys in range(len(self.limb_systems)):
             self.jnt_listIK = []
-            self.create_skeleton()
+            self.create_skeleton(or_j, sec_axis)
             cmds.parent(self.joint_list[0], grp_joints)
             
             for nr in range(len(self.limb_sections)):
@@ -278,6 +283,7 @@ class PickAPart:
                 cmds.rename(self.joint_list[nr], new_jnt_name)
                 self.jnt_listIK.append(new_jnt_name)
 
+        cmds.parent(grp_joints, self.GRP_ALL)
         self.create_limb_fk(custom_name, part)
         self.create_limb_ik(custom_name, part)
         self.fkik_blend(custom_name, part)
@@ -299,27 +305,28 @@ class PickAPart:
         print(sys_jointsFK)
 
         #Create a control under a group
-        for nr_j in range(len(sys_jointsFK)):
-            control_name = sys_jointsFK[nr_j].replace('jnt_', 'ctl_')
-            control_creation = cmds.circle(name=control_name, normal=(1, 0, 0), radius=5)
-            cmds.delete(control_name, constructionHistory=True) 
+        fk_offsets = []
 
-            group_name = sys_jointsFK[nr_j].replace('jnt_', 'off_')
-            cmds.group(control_name, name = group_name)
+        for nr_j in range(len(sys_jointsFK)):
+            ctl_name = sys_jointsFK[nr_j].replace('jnt_', 'ctl_')
+            self.create_custom_controls('circle', ctl_name, 4)
+ 
+            group_name = ctl_name.replace('ctl_', 'off_')
 
             cmds.matchTransform(group_name, sys_jointsFK[nr_j])
-            cmds.parentConstraint(control_name, sys_jointsFK[nr_j], maintainOffset=True)
+            cmds.parentConstraint(ctl_name, sys_jointsFK[nr_j], maintainOffset=True)
             
             cmds.parent(cmds.ls(sl=True), self.grp_controlsFK)
-
-        fk_offsets = cmds.listRelatives(self.grp_controlsFK, children=True, type='transform')
+            fk_offsets.append(group_name)
+        print('******************')
+        print(fk_offsets)
 
         for nr_off in range(len(fk_offsets[:-1])):
-            fk_control = cmds.listRelatives(fk_offsets[nr_off+1], children=True, type='transform')
+            fk_control = fk_offsets[nr_off+1].replace('off', 'ctl')
             cmds.parent(fk_offsets[nr_off], fk_control)
 
         # root_FK_off = 'off_FK_Shoulder' + custom_name + '_L'
-        cmds.parent(self.grp_controlsFK, self.ctrl_main)
+        cmds.parent(self.grp_controlsFK, self.CTRL_MAIN)
 
         # STRETCH FK
         off_midFK = 'off_FK_' + self.limb_sections[1] + custom_name + self.side
@@ -367,14 +374,15 @@ class PickAPart:
 
         for nr in range(len(ctrls_limbIK)):
             cmds.matchTransform(offs_limbIK[nr], self.jnt_listIK[nr])
-        print('*****match*****')
-        print(self.guide_poleV)
+        
+        if 'Leg' in part:
+            cmds.setAttr(str(off_endIK) + '.rotate', 0, 0, 0)
         cmds.matchTransform(off_rotIK, self.jnt_listIK[2])
         cmds.matchTransform(off_poleIK, self.guide_poleV)
 
         cmds.parent(off_poleIK, ctrl_endIK)
         cmds.parent(off_baseIK, off_endIK, self.grp_controlsIK)
-        cmds.parent(self.grp_controlsIK, self.ctrl_main)
+        cmds.parent(self.grp_controlsIK, self.CTRL_MAIN)
 
         # Create IK
         IK_end_jnt = self.jnt_listIK[2]
@@ -395,6 +403,8 @@ class PickAPart:
 
         cmds.parentConstraint(ctrl_baseIK, IK_start_jnt) 
         cmds.orientConstraint(ctrl_rotIK, IK_end_jnt)
+
+        # Create Soft IK
 
     def fkik_blend(self, custom_name, part, *args):
         self.jnt_listFK = []
@@ -426,7 +436,7 @@ class PickAPart:
         self.off_switch_name = ctl_switch_name.replace('ctl_', 'off_')
 
         cmds.parentConstraint(jnt_skeleton_main[0], self.off_switch_name, maintainOffset=False, skipRotate=['x', 'y', 'z'])
-        cmds.parent(self.off_switch_name, self.ctrl_main)
+        cmds.parent(self.off_switch_name, self.CTRL_MAIN)
 
         self.blc_rotation_list = []
         self.blc_translation_list = []
@@ -472,8 +482,6 @@ class PickAPart:
         cmds.setAttr(jnt_skeleton_FK[0] + '.visibility', 0)
         cmds.setAttr(jnt_skeleton_IK[0] + '.visibility', 0)
        
-
-
     def create_custom_controls(self, shape, ctl_name, s=1.25, *args):
         if shape == 'cube':
             points = [(s, s, -s), (-s, s, -s), (-s, s, s), (s, s, s), (s, s, -s),
@@ -535,6 +543,10 @@ class PickAPart:
             
             for circle in circles_list[1:]:
                 cmds.delete(circle)
+        
+        elif shape == 'circle':
+            cmds.circle(name=ctl_name, normal=(1, 0, 0), radius=s)
+            cmds.delete(ctl_name, constructionHistory=True)     
         
         # cmds.xform(ctl_name, centerPivots=True)
         cmds.move(0, 0, 0, str(ctl_name) + '.scalePivot', str(ctl_name) + '.rotatePivot', worldSpace=True)
