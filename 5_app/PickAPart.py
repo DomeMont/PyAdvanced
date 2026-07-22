@@ -198,18 +198,18 @@ class PickAPart:
 
     def create_main_part(self, *args):
         ctrl_global = 'ctl_Global_C'
-        ctrl_main   = 'ctl_Main_C'
-        main_ctrls  = [ctrl_global, ctrl_main]
+        self.ctrl_main   = 'ctl_Main_C'
+        main_ctrls  = [ctrl_global, self.ctrl_main]
         grp_main_ctrls = []
         size = 100 # cm
 
         cmds.circle(name=ctrl_global, normal=(0, 1, 0), radius=size*0.75)
-        cmds.circle(name=ctrl_main, normal=(0, 1, 0), radius=size*0.65)
+        cmds.circle(name=self.ctrl_main, normal=(0, 1, 0), radius=size*0.65)
 
         for main_ctrl in main_ctrls: cmds.setAttr(main_ctrl + 'Shape' + '.overrideEnabled', 1)
         
         cmds.setAttr(ctrl_global + 'Shape' + '.overrideColor', 17)
-        cmds.setAttr(ctrl_main + 'Shape' + '.overrideColor', 18)
+        cmds.setAttr(self.ctrl_main + 'Shape' + '.overrideColor', 18)
             
         for main_ctrl in main_ctrls:
             cmds.delete(main_ctrl, constructionHistory=True)
@@ -254,6 +254,11 @@ class PickAPart:
                 cmds.rename(self.joint_list[nr], new_jnt_name)
 
         self.create_arm_fk(custom_name, part)
+        self.create_arm_ik(custom_name, part)
+        self.create_custom_controls('cube', 'ctl_Test_cube')
+        self.create_custom_controls('cone', 'ctl_Test_cone')
+        self.create_custom_controls('sphere', 'ctl_Test_sphere')
+        self.create_custom_controls('lever', 'ctl_Test_lever')
     
     def create_arm_fk(self, custom_name, part, *args):
         self.grp_controlsFK = 'grp_controls_FK_' + str(part)
@@ -270,7 +275,7 @@ class PickAPart:
         for nr_j in range(len(sys_jointsFK)):
             control_name = sys_jointsFK[nr_j].replace('jnt_', 'ctl_')
             control_creation = cmds.circle(name=control_name, normal=(1, 0, 0), radius=5)
-            # cmds.delete(control_name, constructionHistory=True) 
+            cmds.delete(control_name, constructionHistory=True) 
 
             group_name = sys_jointsFK[nr_j].replace('jnt_', 'off_')
             cmds.group(control_name, name = group_name)
@@ -279,12 +284,15 @@ class PickAPart:
             cmds.parentConstraint(control_name, sys_jointsFK[nr_j], maintainOffset=True)
             
             cmds.parent(cmds.ls(sl=True), self.grp_controlsFK)
-        # cmds.parent(self.grp_controlsFK, self.main_grp)
+
         fk_offsets = cmds.listRelatives(self.grp_controlsFK, children=True, type='transform')
 
         for nr_off in range(len(fk_offsets[:-1])):
             fk_control = cmds.listRelatives(fk_offsets[nr_off+1], children=True, type='transform')
             cmds.parent(fk_offsets[nr_off], fk_control)
+
+        # root_FK_off = 'off_FK_Shoulder' + custom_name + '_L'
+        cmds.parent(self.grp_controlsFK, self.ctrl_main)
 
         # STRETCH FK
         off_elbowFK = 'off_FK_Elbow' + custom_name + '_L'
@@ -304,6 +312,79 @@ class PickAPart:
             cmds.connectAttr(str(ctrl_stretchFK) + '.Stretch', str(mlt_UpperArmStretch_FK) + '.input1X')
             cmds.setAttr(str(mlt_UpperArmStretch_FK) + '.input2X', base_stretch)
             cmds.connectAttr(str(mlt_UpperArmStretch_FK) + '.outputX', str(off_FK) + '.translateX')
+
+    def create_arm_ik(self, custom_name, part, *args):
+        pass
+
+    def create_custom_controls(self, shape, ctl_name, s=1.25, *args):
+        if shape == 'cube':
+            points = [(s, s, -s), (-s, s, -s), (-s, s, s), (s, s, s), (s, s, -s),
+                      (s, -s, -s), (-s, -s, -s), (-s, -s, s), (s, -s, s), (s, -s, -s),
+                      (-s, -s, -s), (-s, s, -s),
+                      (-s, s, s), (-s, -s, s), (s, -s, s), (s, s, s)]
+            crv_curve = cmds.curve(point=points, degree=1, name=ctl_name)
+
+        elif shape == 'cone':
+            s = s*0.5
+            points =[(-s, 0, s), (0, s*2, 0), (s, 0, s), (-s, 0, s),
+                     (-s, 0, -s), (0, s*2, 0), (s, 0, -s), (-s, 0, -s),
+                     (s, 0, -s), (s, 0, s)]
+            crv_curve = cmds.curve(point=points, degree=1, name=ctl_name)
+        
+        elif shape == 'lever':
+            points =[(0, 0, 0), (0, s*4, 0)]
+            stick = cmds.curve(point=points, degree=1, name=ctl_name)
+
+            circle_x = cmds.circle(name=ctl_name, normal=(1, 0, 0), radius=s)
+            circle_y = cmds.circle(name=ctl_name+'02',normal=(0, 1, 0), radius=s)
+            circle_z = cmds.circle(name=ctl_name+'03',normal=(0, 0, 1), radius=s)
+                
+            circles_list = [stick, circle_x[0], circle_y[0], circle_z[0]]
+            shape_list = []
+
+            for circle in circles_list[1:]:
+                cmds.move(0, s*4, 0, circle)
+                cmds.makeIdentity(circle, apply=True)
+                shape = str(circle) + 'Shape'
+                shape_list.append(shape)
+
+            cmds.select(shape_list)
+            cmds.select(ctl_name, add=True)
+            mel.eval('parent -r -s')
+            
+            cmds.delete(ctl_name, constructionHistory=True)
+
+            for circle in circles_list[1:]:
+                cmds.delete(circle)
+        
+        elif shape == 'sphere':
+            circle_x = cmds.circle(name=ctl_name, normal=(1, 0, 0), radius=s)
+            circle_y = cmds.circle(name=ctl_name+'02',normal=(0, 1, 0), radius=s)
+            circle_z = cmds.circle(name=ctl_name+'03',normal=(0, 0, 1), radius=s)
+                
+            circles_list = [circle_x[0], circle_y[0], circle_z[0]]
+            shape_list = []
+
+            for circle in circles_list[1:]:
+                cmds.makeIdentity(circle, apply=True)
+                shape = str(circle) + 'Shape'
+                shape_list.append(shape)
+
+            cmds.select(shape_list)
+            cmds.select(ctl_name, add=True)
+            mel.eval('parent -r -s')
+            cmds.delete(ctl_name, constructionHistory=True)
+            
+            for circle in circles_list[1:]:
+                cmds.delete(circle)
+        
+        off_curve = ctl_name.replace('ctl_', 'off_')
+        cmds.xform(ctl_name, centerPivots=True)
+        cmds.makeIdentity(ctl_name, apply=True )
+        cmds.group(ctl_name, name=off_curve)
+        cmds.move(0, 0, 0, str(ctl_name) + '.scalePivot', str(ctl_name) + '.rotatePivot', worldSpace=True)
+        cmds.move(0, 0, 0, str(off_curve) + '.scalePivot', str(off_curve) + '.rotatePivot', worldSpace=True)
+
 
     def create_part(self, *args):
         self.get_items_hierarchy()
