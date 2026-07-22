@@ -30,7 +30,7 @@ class PickAPart:
         cmds.setParent('..')
 
         # ************************* SELECT MAIN GROUP NAME *********************
-        cmds.text(label='SELECT MAIN GROUP NAME',
+        self.main_grp_name = cmds.text(label='SELECT MAIN GROUP NAME',
                   font='boldLabelFont',
                   align='center',
                   height=15)
@@ -197,8 +197,12 @@ class PickAPart:
         cmds.delete(self.grp_guides)
 
     def create_main_part(self, *args):
-        ctrl_global = 'ctl_Global_C'
-        self.ctrl_main   = 'ctl_Main_C'
+        # Pendiente usar el nombre del input
+        # main_grp_name  = cmds.textField(self.main_grp_name, query = True, text=True)
+        ctrl_global    = 'ctl_Global_C'
+        self.ctrl_main = 'ctl_Main_C'
+        
+        
         main_ctrls  = [ctrl_global, self.ctrl_main]
         grp_main_ctrls = []
         size = 100 # cm
@@ -230,31 +234,35 @@ class PickAPart:
             guide_position = cmds.xform(guide, q=True, worldSpace=True, translation=True)
             jnt = cmds.joint(position=(guide_position[0], guide_position[1], guide_position[2]))
             self.joint_list.append(jnt)
+
         cmds.joint(self.joint_list,e=True, orientJoint='xyz', secondaryAxisOrient='yup')
-        # cmds.select(deselect=True)
+        cmds.joint(self.joint_list[-1], e=True, orientJoint='none')
 
     def create_arm(self, custom_name, part, *args):
-        arm_sections = ['Shoulder', 'Elbow', 'Wrist', 'EndHand']
-        arm_systems  = ['','FK_', 'IK_']
-        prefix_jnts  = 'jnt_'
-        side = '_L'
+        self.arm_sections = ['Shoulder', 'Elbow', 'Wrist', 'EndHand']
+        self.arm_systems  = ['','FK_', 'IK_']
+        self.prefix_jnts  = 'jnt_'
+        self.side = '_L'
          
-        grp_guide  = 'grp_Guides_' + str(part) + str(side)
-        grp_joints = 'grp_Joints_' + str(part) + str(side)
+        grp_guide  = 'grp_Guides_' + str(part) + str(self.side)
+        grp_joints = 'grp_Joints_' + str(part) + str(self.side)
 
         self.guide_list = cmds.listRelatives(grp_guide, allDescendents=True, type="transform")
         cmds.group(empty=True, name=grp_joints)
 
-        for nr_sys in range(len(arm_systems)):
+        for nr_sys in range(len(self.arm_systems)):
+            self.jnt_listIK = []
             self.create_skeleton()
             cmds.parent(self.joint_list[0], grp_joints)
             
-            for nr in range(len(arm_sections)):
-                new_jnt_name = prefix_jnts + arm_systems[nr_sys] + arm_sections[nr] + custom_name + side
+            for nr in range(len(self.arm_sections)):
+                new_jnt_name = self.prefix_jnts + self.arm_systems[nr_sys] + self.arm_sections[nr] + custom_name + self.side
                 cmds.rename(self.joint_list[nr], new_jnt_name)
+                self.jnt_listIK.append(new_jnt_name)
 
         self.create_arm_fk(custom_name, part)
         self.create_arm_ik(custom_name, part)
+        self.fkik_blend(custom_name, part)
         # self.create_custom_controls('cube', 'ctl_cubeTest')
         # self.create_custom_controls('cone', 'ctl_coneTest')
         # self.create_custom_controls('lever', 'ctl_leverTest')
@@ -263,7 +271,7 @@ class PickAPart:
     def create_arm_fk(self, custom_name, part, *args):
         self.grp_controlsFK = 'grp_controls_FK_' + str(part)
         grp_controls = cmds.group(empty=True, name=self.grp_controlsFK)
-        root_FK = 'jnt_FK_Shoulder' + custom_name + '_L'
+        root_FK = 'jnt_FK_Shoulder' + custom_name + self.side
 
         sys_jointsFK = cmds.listRelatives(root_FK,allDescendents=True)
         sys_jointsFK.append(root_FK)
@@ -295,8 +303,8 @@ class PickAPart:
         cmds.parent(self.grp_controlsFK, self.ctrl_main)
 
         # STRETCH FK
-        off_elbowFK = 'off_FK_Elbow' + custom_name + '_L'
-        off_wristFK = 'off_FK_Wrist' + custom_name + '_L'
+        off_elbowFK = 'off_FK_Elbow' + custom_name + self.side
+        off_wristFK = 'off_FK_Wrist' + custom_name + self.side
         offs_FK = [str(off_elbowFK), str(off_wristFK)]
 
         for off_FK in offs_FK:
@@ -314,14 +322,142 @@ class PickAPart:
             cmds.connectAttr(str(mlt_UpperArmStretch_FK) + '.outputX', str(off_FK) + '.translateX')
 
     def create_arm_ik(self, custom_name, part, *args):
-        ctrl_baseIK = 'ctl_ShoulderIK' + custom_name + 'Base' + 'L'
-        ctrl_poleIK = 'ctl_' + part + custom_name + 'PoleVector' + 'L'
-        ctrl_endIK  = 'ctl_HandIK' + custom_name + 'L'
+        self.grp_controlsIK = 'grp_controls_IK_' + str(part)
+        grp_controls = cmds.group(empty=True, name=self.grp_controlsIK)
+        
+        ctrl_baseIK = 'ctl_ShoulderIK' + custom_name + 'Base' + self.side
+        ctrl_poleIK = 'ctl_' + custom_name + 'PoleVector' + self.side
+        ctrl_endIK  = 'ctl_HandIK' + custom_name + self.side
+        ctrl_rotIK  = 'ctl_HandIKRot' + custom_name + self.side
+        ctrls_limbIK = [ctrl_baseIK, ctrl_poleIK, ctrl_endIK, ctrl_rotIK]
+        
+        off_baseIK = ctrl_baseIK.replace('ctl_', 'off_')
+        off_poleIK = ctrl_poleIK.replace('ctl_', 'off_')
+        off_endIK  = ctrl_endIK.replace('ctl_', 'off_')
+        off_rotIK  = ctrl_rotIK.replace('ctl_', 'off_')
+        offs_limbIK = [off_baseIK, off_poleIK, off_endIK, off_rotIK]
+
+        print('Estos son los joints')
+        print(self.jnt_listIK)
+
         # Create controls 
         self.create_custom_controls('lever', ctrl_baseIK, 4)
         self.create_custom_controls('cone', ctrl_poleIK, 4)
         cmds.setAttr(str(ctrl_poleIK) + '.rx',90)
+        cmds.makeIdentity(ctrl_poleIK, apply=True )
         self.create_custom_controls('cube', ctrl_endIK, 4)
+        self.create_custom_controls('sphere', ctrl_rotIK, 4)
+
+        for nr in range(len(ctrls_limbIK)):
+            cmds.matchTransform(offs_limbIK[nr], self.jnt_listIK[nr])
+
+        cmds.matchTransform(off_rotIK, self.jnt_listIK[2])
+
+        off_baseIK = ctrl_baseIK.replace('ctl_', 'off_')
+        off_poleIK = ctrl_poleIK.replace('ctl_', 'off_')
+        off_endIK  = ctrl_endIK.replace('ctl_', 'off_')
+
+        cmds.setAttr(str(off_poleIK) + '.translateZ', -20)
+        cmds.parent(off_poleIK, ctrl_endIK)
+        cmds.parent(off_baseIK, off_endIK, self.grp_controlsIK)
+        cmds.parent(self.grp_controlsIK, self.ctrl_main)
+
+        # Create IK
+        IK_end_jnt = self.jnt_listIK[2]
+        IK_name = part + custom_name + str("IK")
+        IK_handle =  str('ikH_') + IK_name + self.side
+        ctl_ikH_name = ctrl_endIK
+        IK_start_jnt = self.jnt_listIK[0]
+        IK_end_jnt =self.jnt_listIK[2]
+
+        cmds.ikHandle(name=IK_handle, startJoint=IK_start_jnt, endEffector=IK_end_jnt, solver='ikRPsolver')
+        effector = cmds.ikHandle(IK_handle, q=True,  endEffector=True)
+        eff_name = str('eff_') + IK_name + self.side
+        cmds.rename(effector, eff_name)
+        cmds.poleVectorConstraint(ctrl_poleIK, IK_handle)
+
+        cmds.parent(IK_handle, ctrl_rotIK)
+        cmds.parent(off_rotIK, ctrl_endIK)
+
+        cmds.parentConstraint(ctrl_baseIK, IK_start_jnt) 
+        cmds.orientConstraint(ctrl_rotIK, IK_end_jnt)
+
+    def fkik_blend(self, custom_name, part, *args):
+        self.jnt_listFK = []
+        self.jnt_list = []
+
+        for nr in range(len(self.jnt_listIK)):
+            print(self.jnt_listIK[nr])
+            jnt_FK= self.jnt_listIK[nr].replace('IK_', 'FK_')
+            self.jnt_listFK.append(jnt_FK)
+
+            jnt= self.jnt_listIK[nr].replace('IK_', '')
+            self.jnt_list.append(jnt)
+
+
+        jnt_skeleton_main = self.jnt_list
+        jnt_skeleton_FK = self.jnt_listFK
+        jnt_skeleton_IK = self.jnt_listIK
+        print('skeleton main:' + str(jnt_skeleton_main))
+        print('skeleton FK:' + str(jnt_skeleton_FK))
+        print('skeleton IK:' + str(jnt_skeleton_IK))
+
+        name = custom_name
+        ctl_switch_name = 'ctl_IKFK' + name
+        ctl_switch = self.create_custom_controls('cube', ctl_switch_name, 3)
+
+        cmds.makeIdentity(ctl_switch_name, apply=True)
+        cmds.addAttr(ctl_switch_name, longName= 'FK_IK', shortName='FK_IK', keyable=True, attributeType='float', 
+                     defaultValue=0.0, minValue=0.0, maxValue=1.0)
+        self.off_switch_name = ctl_switch_name.replace('ctl_', 'off_')
+
+        cmds.parentConstraint(jnt_skeleton_main[0], self.off_switch_name, maintainOffset=False, skipRotate=['x', 'y', 'z'])
+        cmds.parent(self.off_switch_name, self.ctrl_main)
+
+        self.blc_rotation_list = []
+        self.blc_translation_list = []
+        for nr_j in range(len(jnt_skeleton_main)):
+            print(jnt_skeleton_main[nr_j])
+            blc_name = jnt_skeleton_main[nr_j].split('_')[1:]
+            blc_name = '_'.join(blc_name)
+            
+            blc_rotation = 'blc_Rotation' + blc_name
+            cmds.createNode('blendColors', n=blc_rotation)
+            cmds.connectAttr(jnt_skeleton_IK[nr_j] + '.rotate', blc_rotation + '.color1', f=True)
+            cmds.connectAttr(jnt_skeleton_FK[nr_j] + '.rotate', blc_rotation + '.color2', f=True)
+            cmds.connectAttr(blc_rotation + '.output', jnt_skeleton_main[nr_j] + '.rotate', f=True)
+            self.blc_rotation_list.append(blc_rotation)
+
+            blc_translation = 'blc_Translation' + blc_name
+            cmds.createNode('blendColors', n=blc_translation)
+            cmds.connectAttr(jnt_skeleton_IK[nr_j] + '.translate', blc_translation + '.color1', f=True)
+            cmds.connectAttr(jnt_skeleton_FK[nr_j] + '.translate', blc_translation + '.color2', f=True)
+            cmds.connectAttr(blc_translation + '.output', jnt_skeleton_main[nr_j] + '.translate', f=True)
+            self.blc_translation_list.append(blc_translation)
+
+        print('Blend color nodes created:')
+        print(self.blc_rotation_list, self.blc_translation_list)
+
+        cmds.connectAttr(ctl_switch_name + '.FK_IK', self.blc_rotation_list[0] + '.blender', f=True)
+        cmds.connectAttr(ctl_switch_name + '.FK_IK', self.blc_translation_list[0] + '.blender', f=True)
+
+        for nr in range(len(self.blc_rotation_list[:-1])):
+            print(self.blc_rotation_list[nr])
+            cmds.connectAttr(self.blc_rotation_list[nr] + '.blender', self.blc_rotation_list[nr+1] + '.blender', f=True)
+
+        for nr in range(len(self.blc_translation_list[:-1])):
+            print(self.blc_translation_list[nr])
+            cmds.connectAttr(self.blc_translation_list[nr] + '.blender', self.blc_translation_list[nr+1] + '.blender', f=True)
+
+        switch_visibility = 'rev_IKFKSwitch' + name
+        cmds.createNode('reverse', n=switch_visibility)
+        cmds.connectAttr(ctl_switch_name + '.FK_IK', switch_visibility + ".input.inputX", f=True)
+        cmds.connectAttr(switch_visibility + ".outputX", self.grp_controlsFK + ".visibility", f=True)
+        cmds.connectAttr(ctl_switch_name + '.FK_IK', self.grp_controlsIK + ".visibility", f=True)
+
+        cmds.setAttr(jnt_skeleton_FK[0] + '.visibility', 0)
+        cmds.setAttr(jnt_skeleton_IK[0] + '.visibility', 0)
+       
 
 
     def create_custom_controls(self, shape, ctl_name, s=1.25, *args):
