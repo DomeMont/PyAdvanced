@@ -3,7 +3,7 @@ Pick A-Part
 content     creates rigging systems based on the added 
             parts under the same hierarchy
 
-date        19/07/2026
+date        22/07/2026
 dependency  Maya, Mel
 how_to      start()
 
