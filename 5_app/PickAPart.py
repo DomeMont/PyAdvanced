@@ -35,10 +35,10 @@ def add_part(txt_part, main, tree_hierarchy):
         cmds.treeView(tree_hierarchy, edit=True, addItem=(MAIN_NAME, ''))
 
     version = 0
-    while cmds.treeView(tree_hierarchy, q=True, itemExists=f"{current_part}.{version:02d}"):
+    while cmds.treeView(tree_hierarchy, q=True, itemExists=f"{current_part}{version:02d}"):
         version += 1
 
-    part_name = f"{current_part}.{version:02d}"
+    part_name = f"{current_part}{version:02d}"
 
     cmds.treeView(tree_hierarchy, edit=True, addItem=(part_name, MAIN_NAME))
 
@@ -70,85 +70,107 @@ def delete_confirm(step):
         elif step==' rig':
             delete_rig()
 
-    def get_items_hierarchy():
-        parts = cmds.treeView('Hierarchy_tree', q=True, children='')    
-        all_parts = []
+def get_items_hierarchy():
+    parts = cmds.treeView('Hierarchy_tree', q=True, children='')    
+    all_parts = []
 
-        for part in parts: 
-            all_parts.append(part)
+    for part in parts: 
+        all_parts.append(part)
 
-        return all_parts
+    return all_parts
+            
+    print('Parts: ' + str(all_parts))
+
+# GUIDES CREATION ******************************************************
+class Guides:
+    def __init__(self):
+        self.name = ''
+        self.side = '_L'
+        self.sections = []
+        self.translation = (0, 0, 0)
+
+        # self.guide_creation()
+        
+    def guide_creation(self):
+        previous_guide = None
+
+        for nr in range(len(self.sections)):
+            guide_name = f'guide_{self.sections[nr]}{self.name}{self.side}'
+            current_guide = cmds.spaceLocator(name=guide_name)[0]    
+            cmds.setAttr(f'{guide_name}Shape.localScale', 5.0, 5.0, 5.0)
+
+            if previous_guide:
+                cmds.parent(current_guide, previous_guide) 
+                cmds.setAttr(f'{current_guide}.translate', self.translation[0], self.translation[1] ,self.translation[2])
+            else:
+                self.guide_grp_name = f'grp_Guides_{self.part}{self.name}{self.side}'
+                cmds.group(current_guide, name=self.guide_grp_name, absolute=False)
                 
-        print('Parts: ' + str(all_parts))
-
-# # GUIDES CREATION ******************************************************
-# class CreateGuide:
-#     def __innit__():
-
-#         part = ''
-
-# class LimbGuide(CreateGuide):
-#     pass
-
-# def create_guides():
-#     get_items_hierarchy()
-
-
-
-# def create_guides():
-#     print('**Create guides**')
-#     get_items_hierarchy()
-#     grp_guides_list = []
-
-#     for part in all_parts:
-#         if 'Arm' in part:
-#             print('creating an arm guide')
-#             # custom_name = part.replace('Arm', '')
-#             # create_limb_guide(part, nr_guides=4) 
-#         elif 'Leg' in part:
-#             print('creating a leg guide')
-#             # custom_name = part.replace('Leg', '')
-#             # create_limb_guide(part, nr_guides=4, tr=(0, -10, 0)) 
+            previous_guide = current_guide
     
-#     grp_all_guides = cmds.group( empty=True, name='grp_GUIDES' )
-#     cmds.parent(grp_guides_list, grp_all_guides)
+class LimbGuide(Guides):
+    def __init__(self, part, name):
+        super().__init__()
+        self.part = part
+        self.name = name
 
-# def create_limb_guide(self, part, nr_guides, tr=(10,0,0),*args):
-#     """
-#     Args:
-#         part (str): The selected part (Arm, Leg)
-#         nr_guides (int): The number of guides that are created
-#         tr (int): Direction in which the guides will be created. Defaults to (10,0,0).
-#     """
-#     previous_loc = None
+        if part == 'Arm':
+            self.sections = ['Clavicle', 'Shoulder', 'Elbow', 'Wrist', 'HandEnd']
+            self.bend = 'Elbow'
+            self.translation = (10, 0, 0)
+            self.bend_translate = -10
+        else:
+            self.sections = ['Hip', 'Knee', 'Ankle', 'FootEnd']
+            self.bend = 'Knee'
+            self.translation = (0, -10, 0)
+            self.bend_translate = 10
 
-#     for nr in range(nr_guides):
-#         loc_name = 'guide_' + str(part) + str(nr+1) + '_L'
-#         current_loc = cmds.spaceLocator(name=loc_name)[0]
-#         cmds.setAttr(str(loc_name) + 'Shape'+ '.localScale', 5.0, 5.0, 5.0)
-                        
-#         if previous_loc:
-#             cmds.parent(current_loc, previous_loc)
-#             cmds.setAttr(str(current_loc) + '.translate', tr[0], tr[1] ,tr[2])
-#         else:
-#             guide_grp_name = 'grp_Guides_' + part + '_L'
-#             cmds.group(current_loc, name=guide_grp_name, absolute=False)
-#             self.grp_guides_list.append(guide_grp_name)
+        self.guide_creation()
+        self.pole_vector()
 
-#         previous_loc = current_loc
+    def pole_vector(self):
+        # Create a guide for a Pole Vector
+        guide_poleV = f'guide_PoleVector_{self.part}{self.name}{self.side}'
+        guide_poleV = cmds.spaceLocator(name=guide_poleV)[0]
+        cmds.setAttr(f'{guide_poleV}Shape.localScale', 5.0, 5.0, 5.0)
+
+        guide_bend = f'guide_{self.bend}{self.name}{self.side}'
+        bend_position = cmds.xform(guide_bend, query=True, translation=True, worldSpace=True)
+        cmds.xform(guide_poleV, worldSpace=True, translation=(bend_position[0], bend_position[1], self.bend_translate))
+
+        cmds.parent(guide_poleV, self.guide_grp_name)
+
+def create_guides():
+    print('**Create guides**')
+    global GUIDES
+    GUIDES = 'grp_GUIDES'
     
-#     # Create a guide for a Pole Vector
-#     loc_poleV = 'guide_PoleVector_' + str(part) + '_L'
-#     cmds.spaceLocator(name=loc_poleV)[0]
-#     cmds.setAttr(str(loc_poleV) + 'Shape'+ '.localScale', 5.0, 5.0, 5.0)
+    all_parts = get_items_hierarchy()
 
-#     cmds.parent(loc_poleV, guide_grp_name)
+    for part in all_parts:
+        name = part
 
-#     print('grp guides: ' + str(self.grp_guides_list))
+        if 'Arm' in part:
+            print('creating an arm guide')
+            name = name.replace('Arm', '')
+            LimbGuide('Arm', name)
+
+        elif 'Leg' in part:
+            print('creating a leg guide')
+            name = name.replace('Leg', '')
+            LimbGuide('Leg', name)
+    
+    grp_guides_list = cmds.ls('grp_Guides*', type='transform')
+    print(f'guias: {grp_guides_list}')
+            
+    grp_all_guides = cmds.group(empty=True, name=GUIDES)
+    cmds.parent(grp_guides_list, grp_all_guides)
+
                 
-# def delete_guides(self, *args):
-#     print('**Delete guides**')
-#     cmds.delete(self.grp_guides)
+def delete_guides():
+    grp_guides = cmds.ls(GUIDES, type='transform')
+    print('**Delete guides**')
+    cmds.delete(grp_guides)
 
 # # PARTS CREATION / RIG CREATION *****************************************************
 # def create_main_part(self, *args):
