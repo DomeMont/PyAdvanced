@@ -8,10 +8,16 @@ how_to      start()
 
 author      Domenica Montesdeoca <https://www.linkedin.com/in/maydo3d/>
 *******************************************************************"""
+
+import sys
+import json
 import importlib
 
 from maya import mel
 from maya import cmds
+
+PATH = r'F:\TDA_Python_Adv\MontesdeocaApp\5_app'
+sys.path.append(PATH)
 
 import PickAPart as pick
 
@@ -84,7 +90,8 @@ def pick_a_part_ui(*args):
     # EDIT HIERARCHY *****************************************************
     cmds.frameLayout(label="Hierarchy", collapsable=True)
 
-    hierarchy = cmds.treeView(numberOfButtons=0,
+    hierarchy = cmds.treeView('Hierarchy_tree',
+                              numberOfButtons=0,
                               allowDragAndDrop=True, 
                               allowReparenting=True,
                               height=100)
@@ -94,8 +101,8 @@ def pick_a_part_ui(*args):
     cmds.rowLayout(numberOfColumns=1, adjustableColumn=1)
     cmds.button(label     ='Delete Part',
                 annotation='Deletes the selected part in the hierarchy',
-                width     =300#, 
-                #command   =lambda *_: delete_confirm(' part')
+                width     =300, 
+                command   =lambda *_: pick.delete_confirm(' part')
                 )
     cmds.setParent('..') 
 
@@ -103,14 +110,14 @@ def pick_a_part_ui(*args):
     cmds.rowLayout(numberOfColumns=2, adjustableColumn=1)
     cmds.button(label     ='Create Guides',
                 annotation='Creates all the needed guides',
-                width     =300#, 
-                #command   =create_guides
+                width     =300, 
+                command   =lambda *_: pick.create_guides()
                 )
 
     cmds.button(label     ='Delete Guides',
                 annotation='Deletes all guides',
-                width     =100#, 
-                #command   =lambda *_: delete_confirm(' guides')
+                width     =100, 
+                command   =lambda *_: pick.delete_confirm(' guides')
                 )
     cmds.setParent('..') 
 
@@ -118,14 +125,14 @@ def pick_a_part_ui(*args):
     cmds.rowLayout(numberOfColumns=2, adjustableColumn=1)
     cmds.button(label     ='Create Rig',
                 annotation='Creates the rig for all parts',
-                width     =300#, 
-                #command   =create_rig
+                width     =300, 
+                command   =lambda *_: pick.create_rig()
                 )
 
     cmds.button(label     ='Delete Rig',
                 annotation='Deletes the rig',
-                width     =100#, 
-                #command   =lambda *_: delete_confirm(' rig')
+                width     =100, 
+                command   =lambda *_: pick.delete_confirm(' rig')
                 )
     cmds.setParent('..') 
 
