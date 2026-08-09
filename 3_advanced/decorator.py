@@ -4,6 +4,9 @@ course  = Python Advanced
  
 date    = 14.11.2025
 email   = contact@alexanderrichtertd.com
+
+modified by = Domenica Montesdeoca
+date = 03/08/2026
 """
 
 
@@ -27,17 +30,22 @@ START - long_sleeping
 
 """
 
-
 import time
-
 
 #*********************************************************************
 # DECORATOR
 def print_process(func):
     def wrapper(*args, **kwargs):
-        func(arg)                  # main_function
-    return wrapper
+        print(f'START - {func.__name__}')
+        func(*args)
 
+        processing_time = time.process_time()
+        hours   = int(processing_time // 3600)
+        minutes = int((processing_time%3600) // 60)
+        seconds = int(processing_time % 60)
+
+        print(f'END - {hours:02d}:{minutes:02d}:{seconds:02d}\n')  
+    return wrapper
 
 #*********************************************************************
 # FUNC
@@ -46,10 +54,16 @@ def short_sleeping(name):
     time.sleep(.1)
     print(name)
 
-def mid_sleeping():
+@print_process
+def mid_sleeping(name):
     time.sleep(2)
+    print(name)
 
-def long_sleeping():
+@print_process
+def long_sleeping(name):
     time.sleep(4)
+    print(name)
 
-short_sleeping("so sleepy")
+short_sleeping("So sleepy")
+mid_sleeping("Time for a nap")
+long_sleeping("Good Night")
