@@ -7,13 +7,17 @@ dependency  Maya, config.json
 
 author      Domenica Montesdeoca <https://www.linkedin.com/in/maydo3d/>
 *******************************************************************"""
-
+import os 
+import sys 
 import json
 from maya import mel
 from maya import cmds
 
+CURRENT_PATH = os.path.dirname(__file__)
+sys.path.append(CURRENT_PATH)
+
 import UI_PickAPart as UI
-json_path = r"F:\TDA_Python_Adv\MontesdeocaApp\5_app\config.json"
+json_path = f'{CURRENT_PATH}\config.json'
 
 """ ********************************************************************************
 Look for the word 'PROBLEMS' for things I had trouble and could not figure out
@@ -40,72 +44,83 @@ def print_process(func):
         print(f'*****{func.__name__} - SUCCESSFUL*****\n')  
     return wrapper
     
-# PARTS HIERARCHY ******************************************************************
-@print_process
-def add_part(txt_part, main, tree_hierarchy):
-    """Gets the group name, creates a Main item in the view tree if it does not exists yet
-    and adds the selected part
+# # PARTS HIERARCHY ******************************************************************
+# @print_process
+# def add_part(txt_part, main, tree_hierarchy):
+#     """Gets the group name, creates a Main item in the view tree if it does not exists yet
+#     and adds the selected part
 
-    Args:
-        txt_part (str): The part that is selected in the option menu
-        main (str): Name input in the text field.'Main' by default
-        tree_hierarchy (str): name od the view tree in the UI
-    """
-    global MAIN_NAME
-    MAIN_NAME    = cmds.textField(main, q=True, text=True) 
-    current_part = cmds.optionMenuGrp(txt_part, q=True, value=True) # Gets the txt_part in the drop down menu    
+#     Args:
+#         txt_part (str): The part that is selected in the option menu
+#         main (str): Name input in the text field.'Main' by default
+#         tree_hierarchy (str): name od the view tree in the UI
+#     """
+#     global MAIN_NAME
+#     MAIN_NAME    = cmds.textField(main, q=True, text=True) 
+#     current_part = cmds.optionMenuGrp(txt_part, q=True, value=True) # Gets the txt_part in the drop down menu    
 
-    if not MAIN_NAME: 
-        MAIN_NAME = 'Main'
+#     if not MAIN_NAME: 
+#         MAIN_NAME = 'Main'
 
-    main_exists = cmds.treeView(tree_hierarchy, q=True, itemExists=MAIN_NAME)
+#     main_exists = cmds.treeView(tree_hierarchy, q=True, itemExists=MAIN_NAME)
 
-    if main_exists == 0:
-        cmds.treeView(tree_hierarchy, edit=True, addItem=(MAIN_NAME, ''))
+#     if main_exists == 0:
+#         cmds.treeView(tree_hierarchy, edit=True, addItem=(MAIN_NAME, ''))
 
-    version = 0
-    while cmds.treeView(tree_hierarchy, q=True, itemExists=f"{current_part}{version:02d}"):
-        version += 1
+#     version = 0
+#     while cmds.treeView(tree_hierarchy, q=True, itemExists=f"{current_part}{version:02d}"):
+#         version += 1
 
-    part_name = f"{current_part}{version:02d}"
-    cmds.treeView(tree_hierarchy, edit=True, addItem=(part_name, MAIN_NAME))
-    print(f'Added: {part_name}')
+#     part_name = f"{current_part}{version:02d}"
+#     cmds.treeView(tree_hierarchy, edit=True, addItem=(part_name, MAIN_NAME))
+#     print(f'Added: {part_name}')
 
-def delete_part():
-    selected_parts = cmds.treeView('Hierarchy_tree', q=True, selectItem=True)
+# def delete_part():
+#     selected_parts = cmds.treeView('Hierarchy_tree', q=True, selectItem=True)
  
-    for part in selected_parts: 
-        cmds.treeView('Hierarchy_tree', edit=True, removeItem=part)
+#     for part in selected_parts: 
+#         cmds.treeView('Hierarchy_tree', edit=True, removeItem=part)
 
-# POP UP ****************************************************************************
-def delete_confirm(step):
-    """Delete pop up for different steps of the process
+# # POP UP ****************************************************************************
+# def delete_confirm(step):
+#     """Delete pop up for different steps of the process
 
-    Args:
-        step (str): Stage of the system creation (part, guide, rig)
-    """
-    result = cmds.confirmDialog(title='DELETE',
-                                message='Delete last' + step + '?',
-                                messageAlign='center',
-                                button=['Yes', 'No'],
-                                defaultButton='Yes',
-                                cancelButton='No')
-    if result == 'Yes':
-        if step==' part':
-            delete_part()
-        elif step==' guides':
-            delete_guides()
-        elif step==' rig':
-            delete_rig()
+#     Args:
+#         step (str): Stage of the system creation (part, guide, rig)
+#     """
+#     result = cmds.confirmDialog(title='DELETE',
+#                                 message='Delete last' + step + '?',
+#                                 messageAlign='center',
+#                                 button=['Yes', 'No'],
+#                                 defaultButton='Yes',
+#                                 cancelButton='No')
+#     if result == 'Yes':
+#         if step==' part':
+#             delete_part()
+#         elif step==' guides':
+#             delete_guides()
+#         elif step==' rig':
+#             delete_rig()
 
-def get_items_hierarchy():
-    parts = cmds.treeView('Hierarchy_tree', q=True, children='')    
-    all_parts = []
+# def get_items_hierarchy():
+#     parts = cmds.treeView('Hierarchy_tree', q=True, children='')    
+#     all_parts = []
 
-    for part in parts: 
-        all_parts.append(part)
+#     for part in parts: 
+#         all_parts.append(part)
 
-    return all_parts
+#     return all_parts
+
+# def get_items_hierarchy(parent):
+#     all_parts = [] 
+#     for row in range(UI.parent.rowCount()):
+#         part = parent.child(row)
+#         all_parts.append(part.text())
+
+#         if part.hasChildren():
+#             all_parts.extend(get_items_hierarchy(part))
+    
+#     return all_parts
 
 # GUIDES CREATION ******************************************************
 class Guides:
@@ -121,6 +136,7 @@ class Guides:
     def __init__(self):
         """Here is an example of the configuration file in use
         """
+    
         self.name = ''
         self.side = data['suffix']['left']
         self.prefix_grp = data['prefix']['group']
@@ -230,14 +246,13 @@ class NeckGuide(Guides):
         self.guide_creation()
 
 @print_process
-def create_guides():
+def create_guides(MAIN_NAME, all_parts):
     """Creates the guides for each part in the view tree under their own group
     and adds them to a main guide group
     """
     global GUIDES
     prefix_grp = data['prefix']['group']
     GUIDES     = f'{prefix_grp}GUIDES_{MAIN_NAME}' 
-    all_parts  = get_items_hierarchy()
     all_parts.pop(0)
 
     # Creates main guide group if it does not exist
@@ -657,11 +672,11 @@ class NeckSkeleton(Rig):
         self.fkik_blend()
 
 @print_process
-def create_rig():
-    create_main_part()
-    create_parts()
+def create_rig(MAIN_NAME, all_parts):
+    create_main_part(MAIN_NAME)
+    create_parts(MAIN_NAME, all_parts)
 
-def create_main_part():
+def create_main_part(MAIN_NAME):
     """Creates the main group and controls for the rig
     """
     global CTRL_MAIN, GRP_ALL
@@ -693,12 +708,10 @@ def create_main_part():
     cmds.addAttr(CTRL_GLOBAL, longName='Global_Scale', attributeType='float', defaultValue=1, 
                  minValue=1, maxValue=100, keyable=True)
 
-def create_parts():
-    all_parts = get_items_hierarchy()
+def create_parts(MAIN_NAME, all_parts):
     global GRP_SKELETON
     prefix_grp = data['prefix']['group']
     GRP_SKELETON = f'{prefix_grp}Skeleton' + MAIN_NAME
-
     grp_skeleton = cmds.group( empty=True, name=GRP_SKELETON)
     cmds.parent(GRP_SKELETON, GRP_ALL)
 
