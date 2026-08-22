@@ -15,8 +15,6 @@ from maya import cmds
 
 CURRENT_PATH = os.path.dirname(__file__)
 sys.path.append(CURRENT_PATH)
-
-import UI_PickAPart as UI
 json_path = f'{CURRENT_PATH}\config.json'
 
 """ ********************************************************************************
@@ -34,6 +32,7 @@ with open(json_path) as json_file:
     In the case of the neck and spine, it is possible to reduce or increase the number of items by modifying the list
     """
 
+
 # DECORATOR  ************************************************************************
 def print_process(func):
     """Helps visualize completed processes in the script editor
@@ -43,110 +42,19 @@ def print_process(func):
         func(*args)
         print(f'*****{func.__name__} - SUCCESSFUL*****\n')  
     return wrapper
-    
-# # PARTS HIERARCHY ******************************************************************
-# @print_process
-# def add_part(txt_part, main, tree_hierarchy):
-#     """Gets the group name, creates a Main item in the view tree if it does not exists yet
-#     and adds the selected part
 
-#     Args:
-#         txt_part (str): The part that is selected in the option menu
-#         main (str): Name input in the text field.'Main' by default
-#         tree_hierarchy (str): name od the view tree in the UI
-#     """
-#     global MAIN_NAME
-#     MAIN_NAME    = cmds.textField(main, q=True, text=True) 
-#     current_part = cmds.optionMenuGrp(txt_part, q=True, value=True) # Gets the txt_part in the drop down menu    
 
-#     if not MAIN_NAME: 
-#         MAIN_NAME = 'Main'
-
-#     main_exists = cmds.treeView(tree_hierarchy, q=True, itemExists=MAIN_NAME)
-
-#     if main_exists == 0:
-#         cmds.treeView(tree_hierarchy, edit=True, addItem=(MAIN_NAME, ''))
-
-#     version = 0
-#     while cmds.treeView(tree_hierarchy, q=True, itemExists=f"{current_part}{version:02d}"):
-#         version += 1
-
-#     part_name = f"{current_part}{version:02d}"
-#     cmds.treeView(tree_hierarchy, edit=True, addItem=(part_name, MAIN_NAME))
-#     print(f'Added: {part_name}')
-
-# def delete_part():
-#     selected_parts = cmds.treeView('Hierarchy_tree', q=True, selectItem=True)
- 
-#     for part in selected_parts: 
-#         cmds.treeView('Hierarchy_tree', edit=True, removeItem=part)
-
-# # POP UP ****************************************************************************
-# def delete_confirm(step):
-#     """Delete pop up for different steps of the process
-
-#     Args:
-#         step (str): Stage of the system creation (part, guide, rig)
-#     """
-#     result = cmds.confirmDialog(title='DELETE',
-#                                 message='Delete last' + step + '?',
-#                                 messageAlign='center',
-#                                 button=['Yes', 'No'],
-#                                 defaultButton='Yes',
-#                                 cancelButton='No')
-#     if result == 'Yes':
-#         if step==' part':
-#             delete_part()
-#         elif step==' guides':
-#             delete_guides()
-#         elif step==' rig':
-#             delete_rig()
-
-# def get_items_hierarchy():
-#     parts = cmds.treeView('Hierarchy_tree', q=True, children='')    
-#     all_parts = []
-
-#     for part in parts: 
-#         all_parts.append(part)
-
-#     return all_parts
-
-# def get_items_hierarchy(parent):
-#     all_parts = [] 
-#     for row in range(UI.parent.rowCount()):
-#         part = parent.child(row)
-#         all_parts.append(part.text())
-
-#         if part.hasChildren():
-#             all_parts.extend(get_items_hierarchy(part))
-    
-#     return all_parts
-
-# GUIDES CREATION ******************************************************
+# GUIDES CREATION ****************************************************************************************************************
 class Guides:
-    """Contains the base variables and function to create a chain of 
-    locators under a group that will be used as guides.
-        Why?
-        -A guide is created for each Part so it is used to create multiple objects
-        -The base variables for the guides are shared between multiple Parts
-        -Consistency in the naming of locators, groups, and hierarchy
-        -There are subclasses since they will have specific information according to 
-        the Part they represent 
-    """
+    """Contains the base variables and function to create a chain of locators under a group that will be used as guides per Part."""
+
     def __init__(self):
-        """Here is an example of the configuration file in use
-        """
-    
         self.name = ''
         self.side = data['suffix']['left']
         self.prefix_grp = data['prefix']['group']
 
         self.sections    = data['parts'][self.part]           
         self.translation = (0, 0, 0)
-
-        # self.guide_creation() #
-        # QUESTIONS: Since I want all subclasses to use this function is there a way to give it to all
-        # of them at this level or is it okay to add it in each subclass?
         
     def guide_creation(self):
         previous_guide = None
@@ -171,13 +79,7 @@ class Guides:
             previous_guide = current_guide
 
 class LimbGuide(Guides):
-    """Contains the information needed for the guides of limbs(arms and legs), 
-    and has an extra function for the pole vector
-        Why?
-        -Both limbs have the same structure and only have changes in the direction
-        the guides and the pole vector are created
-        -The limbs use the base guide creation but need information for the 
-        pole vector / the middle joint
+    """Contains the information needed for the guides of limbs(arms and legs), and has an extra function for the pole vector
 
     Args:
         Guides (class): Creates a chain of locators and contains the base information
@@ -216,12 +118,7 @@ class LimbGuide(Guides):
             cmds.parent(guide_poleV, self.guide_grp_name)
 
 class SpineGuide(Guides):
-    """Creates guides for the spine
-        Why?
-        -Only needs information about the direction / translation of the next guide in the chain
-        (same as NeckGuide)
-        -** Separated from the NeckGuide subclass since I plan to add a variable that determines
-        the Part that its rigging system will follow
+    """Contains the information needed for the guides of a spine.
 
     Args:
         Guides (class): Creates a chain of locators and contains the base information
@@ -234,7 +131,6 @@ class SpineGuide(Guides):
         self.translation = (0, 10, 0)  
 
         self.guide_creation()
-
 class NeckGuide(Guides):
     def __init__(self, part, name):
         self.part = part
@@ -246,13 +142,13 @@ class NeckGuide(Guides):
         self.guide_creation()
 
 @print_process
-def create_guides(MAIN_NAME, all_parts):
-    """Creates the guides for each part in the view tree under their own group
-    and adds them to a main guide group
+def create_guides(MAIN_NAME, GUIDES, all_parts):
+    """Creates the guides for each part in the view tree under their own group and adds them to a main guide group
+
+    Args:
+        MAIN_NAME (string): Name input by the user
+        all_parts (list): List of all the Parts in the view tree
     """
-    global GUIDES
-    prefix_grp = data['prefix']['group']
-    GUIDES     = f'{prefix_grp}GUIDES_{MAIN_NAME}' 
     all_parts.pop(0)
 
     # Creates main guide group if it does not exist
@@ -267,48 +163,36 @@ def create_guides(MAIN_NAME, all_parts):
                 name = part.replace('Arm', '')
                 arm  = LimbGuide('Arm', name)
                 grp_guide = arm.guide_grp_name
-                cmds.parent(grp_guide, GUIDES)      #  PROBLEMS: If I don't add this ath this level it doesn't work
 
-            if 'Leg' in part:
+            elif 'Leg' in part:
                 name = part.replace('Leg', '')
                 leg  = LimbGuide('Leg', name)
                 grp_guide = leg.guide_grp_name
-                cmds.parent(grp_guide, GUIDES)
             
-            if 'Spine' in part:
+            elif 'Spine' in part:
                 name  = part.replace('Spine', '')
                 spine = SpineGuide('Spine', name)
                 grp_guide = spine.guide_grp_name
-                cmds.parent(grp_guide, GUIDES)
 
-            if 'Neck' in part:
+            elif 'Neck' in part:
                 name = part.replace('Neck', '')
                 neck = NeckGuide('Neck', name)
                 grp_guide = neck.guide_grp_name
-                cmds.parent(grp_guide, GUIDES)
 
+            cmds.parent(grp_guide, GUIDES)
             print(f'Creating {part} guide')
                 
-def delete_guides():
+def delete_guides(GUIDES):
     grp_guides = cmds.ls(GUIDES, type='transform')
     print('**Delete guides**')
     cmds.delete(grp_guides)
 
-# PARTS CREATION / RIG CREATION *****************************************************
+
+# PARTS CREATION / RIG CREATION **************************************************************************************************
 class Skeleton:
     """Contains all the variables and functions to create a joint chain and duplicate
-    it for the systems the rig needs (FK, IK, IK Spline)
-        Why?
-        -A skeleton is created for each Part, so used for multiple objects
-        -Shared variables for the skeleton creation between Parts
-        -Consistency in the naming of joints, groups for all systems and Parts
+     it for the systems the rig needs (FK, IK, IK Spline)"""
 
-        -** I considered merging this class with the Rig class, 
-        but it seemed better to separate stages even though they share variables 
-        (which is why I created a class hierarchy).
-        What would be your advise? I was afraid of having a long class again but I
-        really need to be able to share information and variables between functions
-    """
     def __init__(self):
         self.side = '_L'
         self.prefix_jnt = data['prefix']['joint']
@@ -353,7 +237,7 @@ class Skeleton:
             new_joint_chain = cmds.listRelatives(new_jnt_base, allDescendents=True, type="joint", fullPath=True) 
             new_joint_chain.append(new_jnt_base)
 
-        # Renames the joints according to the rigging system
+            # Renames the joints according to the rigging system
             self.joints_main = []
             for joint in new_joint_chain:
                 short_name = joint.split('|')[-1]
@@ -372,13 +256,7 @@ class Skeleton:
 class Rig(Skeleton):
     """Contains base variables and functions for the different systems, at the moment 
     FK, IK and a switch between them.
-        Why?
-        -All the variables, names of groups and common prefixes for creating controls and connections
-        -The functions for each system can be used for different subclasses according to need
-        -Consistency in the naming of controls, offsets, groups for all systems and Parts
 
-        -Again different subclasses for each part to determine their unique characteristics
-        using the same bas (class)
     Args:
         Skeleton (class): Creates the skeleton and its duplicates for each rigging system
     """
@@ -393,11 +271,11 @@ class Rig(Skeleton):
         self.IKFK_pos = [0, 0, 0]
 
     def create_fk(self):
-        global CTRL_MAIN
-        root_fk = self.joint_base.replace(self.prefix_jnt, f'{self.prefix_jnt}{self.systems[0]}')
+        # global self.CTRL_MAIN
+        self.root_fk = self.joint_base.replace(self.prefix_jnt, f'{self.prefix_jnt}{self.systems[0]}')
 
-        self.joints_fk = cmds.listRelatives(root_fk,allDescendents=True)
-        self.joints_fk.append(root_fk)
+        self.joints_fk = cmds.listRelatives(self.root_fk,allDescendents=True)
+        self.joints_fk.append(self.root_fk)
         self.joints_fk.pop(0)
 
         mid_fk = self.joints_fk[1]
@@ -410,7 +288,7 @@ class Rig(Skeleton):
         for nr, joint in enumerate(self.joints_fk):
             # Create FK controls
             ctl_name = joint.replace(self.prefix_jnt, self.prefix_ctl)
-            create_custom_controls('circle', ctl_name, 4)
+            create_custom_controls('circle', ctl_name, 4, color=6)
             off_name = ctl_name.replace(self.prefix_ctl, self.prefix_off)
 
             # Position and parent constraint FK controls
@@ -425,7 +303,7 @@ class Rig(Skeleton):
                 control_fk = offsets_fk[nr+1].replace(self.prefix_off, self.prefix_ctl)
                 cmds.parent(offset, control_fk)
 
-        cmds.parent(self.grp_controlsFK, CTRL_MAIN)
+        cmds.parent(self.grp_controlsFK, self.CTRL_MAIN)
 
          # STRETCH FK
         off_midFK = mid_fk.replace(self.prefix_jnt, self.prefix_off)
@@ -453,10 +331,10 @@ class Rig(Skeleton):
 
     def create_ik(self):
         grp_controls = cmds.group(empty=True, name=self.grp_controlsIK)
-        root_ik = self.joint_base.replace(self.prefix_jnt, f'{self.prefix_jnt}{self.systems[1]}')
+        self.root_ik = self.joint_base.replace(self.prefix_jnt, f'{self.prefix_jnt}{self.systems[1]}')
 
-        self.joints_ik = cmds.listRelatives(root_ik,allDescendents=True)
-        self.joints_ik.append(root_ik)
+        self.joints_ik = cmds.listRelatives(self.root_ik,allDescendents=True)
+        self.joints_ik.append(self.root_ik)
         self.joints_ik.pop(0)
         self.joints_ik.reverse()
 
@@ -500,9 +378,9 @@ class Rig(Skeleton):
         cmds.rename(effector, eff_name)
 
         # Create controls 
-        create_custom_controls('lever', ctl_baseIK, 4)
-        create_custom_controls('cube', ctl_endIK, 4)
-        create_custom_controls('sphere', ctl_rotIK, 4)
+        create_custom_controls('lever', ctl_baseIK, 4, color=6)
+        create_custom_controls('cube', ctl_endIK, 4, color=6)
+        create_custom_controls('sphere', ctl_rotIK, 4, color=15)
 
         if 'Leg' in self.part: 
             cmds.setAttr(f'{off_endIK}.rotate', 0, 0, 0)
@@ -521,7 +399,7 @@ class Rig(Skeleton):
 
         # Changes the IK solver to a Rotate Plane solver if a Pole Vector guide is present
         if self.guide_poleV:
-            create_custom_controls('cone', ctl_poleIK, 4)
+            create_custom_controls('cone', ctl_poleIK, 4, color=6)
 
             cmds.parent(off_poleIK, ctl_endIK) 
             cmds.matchTransform(off_poleIK, self.guide_poleV)
@@ -529,7 +407,7 @@ class Rig(Skeleton):
             cmds.poleVectorConstraint(ctl_poleIK, IK_handle)         
 
         cmds.parent(off_baseIK, off_endIK, self.grp_controlsIK)
-        cmds.parent(self.grp_controlsIK, CTRL_MAIN)
+        cmds.parent(self.grp_controlsIK, self.CTRL_MAIN)
 
         # TODO Create Soft IK
     
@@ -540,7 +418,7 @@ class Rig(Skeleton):
 
         # Create names for FK /IK switch control and system
         ctl_switch_name = f'{self.prefix_ctl}_IKFK_{self.part}{self.name}'
-        create_custom_controls('cube', ctl_switch_name, 1)
+        create_custom_controls('cube', ctl_switch_name, 1, color=15)
 
         cmds.addAttr(ctl_switch_name, longName= 'FK_IK', shortName='FK_IK', keyable=True, attributeType='float', 
                      defaultValue=0.0, minValue=0.0, maxValue=1.0)
@@ -551,7 +429,7 @@ class Rig(Skeleton):
 
         # Constraint switch under limb system and parent under main controls
         cmds.parentConstraint(self.joints_main[0], self.off_switch_name, maintainOffset=True, skipRotate=['x', 'y', 'z'])
-        cmds.parent(self.off_switch_name, CTRL_MAIN)
+        cmds.parent(self.off_switch_name, self.CTRL_MAIN)
 
         # FK / IK switch via blend colors (Nodes)
         blc_rotation_list = []
@@ -592,17 +470,10 @@ class Rig(Skeleton):
 
         cmds.setAttr(self.joints_fk[0] + '.visibility', 0)
         cmds.setAttr(self.joints_ik[0] + '.visibility', 0)
+
 class LimbSkeleton(Rig):
-    """Contains the information needed for the rigging system of limbs(arms and legs), 
-    saves the pole vector guide to use its position but deletes it to be able to create the
-    rigging systems
-        Why?
-        -Both limbs have the same structure and only have changes in joint 
-        orientation or in some controls for visibility
-        -The limbs use the same skeleton and rig system creation but need information for the 
-        pole vector / the middle joint
-        -The arm ignores the clavicle to create all rigging systems since tey are only needed
-        from the shoulder 
+    """Contains the information needed for the rigging system of limbs(arms and legs), saves the pole vector guide to 
+    use its position but deletes it to be able to create the rigging systems
 
     Args:
         Rig (class): Creates the required rigging systems
@@ -618,6 +489,7 @@ class LimbSkeleton(Rig):
         if part == 'Arm':
             self.bend     = data['parts']['Arm'][2]    # Elbow
             self.base     = data['parts']['Arm'][1]    # Shoulder
+            self.clavicle = data['parts']['Arm'][0] 
             self.IKFK_pos = [0, 10, 0]
             self.secondary_axis = 'yup'
         else:
@@ -631,6 +503,21 @@ class LimbSkeleton(Rig):
         self.create_ik()
         self.fkik_blend()
 
+        # Creates the clavicle and parents all arm controls to it
+        if part == 'Arm':
+            jnt_clavicle = f'{self.prefix_jnt}{self.clavicle}_{self.name}{self.side}'
+            ctl_clavicle = jnt_clavicle.replace(self.prefix_jnt, self.prefix_ctl)
+            off_clavicle = jnt_clavicle.replace(self.prefix_jnt, self.prefix_off)
+            create_custom_controls('lever', ctl_clavicle, 4, color=6)
+
+            cmds.matchTransform(off_clavicle, jnt_clavicle)
+            cmds.setAttr(f'{off_clavicle}.rotateX', 90)
+            cmds.parentConstraint(ctl_clavicle, jnt_clavicle, maintainOffset=True)
+            cmds.parent(self.grp_controlsFK, ctl_clavicle)
+            cmds.parent(self.grp_controlsIK, ctl_clavicle)
+
+            cmds.parent(off_clavicle, self.CTRL_MAIN)
+            
 class SpineSkeleton(Rig):
     """why?
         -Custom position for Switch control
@@ -646,7 +533,7 @@ class SpineSkeleton(Rig):
         self.secondary_axis = 'zdown'
 
         self.create_skeleton()
-        cmds.joint(self.joint_list[0], e=True, orientJoint='none') # Makes the hip joint be oriented to world
+        cmds.joint(self.joint_list[0], e=True, orientJoint='none')      # Makes the hip joint be oriented to world
 
         self.duplicate_skeleton()
         self.create_fk()
@@ -671,21 +558,28 @@ class NeckSkeleton(Rig):
         self.create_ik()    # This will be replaced for an IK Spline
         self.fkik_blend()
 
-@print_process
-def create_rig(MAIN_NAME, all_parts):
-    create_main_part(MAIN_NAME)
-    create_parts(MAIN_NAME, all_parts)
 
-def create_main_part(MAIN_NAME):
+@print_process
+def create_rig(MAIN_NAME, GRP_ALL, CTRL_GLOBAL, CTRL_MAIN, GRP_SKELETON, all_parts):
+    """Pre-established name nomenclature 
+
+    Args:
+        MAIN_NAME (string): Name input by the user. Default: 'Main'
+        GRP_ALL (string): Name of the group containing all elements of the rig
+        CTRL_GLOBAL (string): Name for the principal control
+        CTRL_MAIN (string): Name for the secondary control
+        GRP_SKELETON (string): Name of the skeleton group
+        all_parts (list): List containing all parts from the view tree
+    """
+    create_main_part(MAIN_NAME, GRP_ALL, CTRL_GLOBAL, CTRL_MAIN)
+    create_parts(MAIN_NAME, GRP_ALL, GRP_SKELETON, CTRL_MAIN, all_parts)
+
+def create_main_part(MAIN_NAME, GRP_ALL, CTRL_GLOBAL, CTRL_MAIN):
     """Creates the main group and controls for the rig
     """
-    global CTRL_MAIN, GRP_ALL
     prefix_grp  = data['prefix']['group']
     prefix_ctl  = data['prefix']['control']
     prefix_off  = data['prefix']['offset']
-    GRP_ALL     = prefix_grp + MAIN_NAME
-    CTRL_MAIN   = f'ctl_Main{MAIN_NAME}_C'
-    CTRL_GLOBAL = f'ctl_Global{MAIN_NAME}_C'
 
     size = 100 # cm
      
@@ -693,14 +587,14 @@ def create_main_part(MAIN_NAME):
     off_main_ctrls = [CTRL_GLOBAL.replace(prefix_ctl, prefix_off), CTRL_MAIN.replace(prefix_ctl, prefix_off)]
 
     # Creates 2 controls that will act as parents for all the rig
-    create_custom_controls('circle', CTRL_GLOBAL, size*0.75, (0, 1, 0))
-    create_custom_controls('circle', CTRL_MAIN, size*0.65, (0, 1, 0))
+    create_custom_controls('circle', CTRL_GLOBAL, size*0.75, (0, 1, 0), color=17)
+    create_custom_controls('circle', CTRL_MAIN, size*0.65, (0, 1, 0), color=18)
 
-    for ctrl in main_ctrls: 
-        cmds.setAttr(f'{ctrl}Shape.overrideEnabled', 1)
+    # for ctrl in main_ctrls: 
+    #     cmds.setAttr(f'{ctrl}Shape.overrideEnabled', 1)
     
-    cmds.setAttr(f'{CTRL_GLOBAL}Shape.overrideColor', 17)
-    cmds.setAttr(f'{CTRL_MAIN}Shape.overrideColor', 18)
+    # cmds.setAttr(f'{CTRL_GLOBAL}Shape.overrideColor', 17)
+    # cmds.setAttr(f'{CTRL_MAIN}Shape.overrideColor', 18)
         
     cmds.parent(off_main_ctrls[1], CTRL_GLOBAL)
     cmds.group(off_main_ctrls[0], name = GRP_ALL)
@@ -708,52 +602,47 @@ def create_main_part(MAIN_NAME):
     cmds.addAttr(CTRL_GLOBAL, longName='Global_Scale', attributeType='float', defaultValue=1, 
                  minValue=1, maxValue=100, keyable=True)
 
-def create_parts(MAIN_NAME, all_parts):
-    global GRP_SKELETON
-    prefix_grp = data['prefix']['group']
-    GRP_SKELETON = f'{prefix_grp}Skeleton' + MAIN_NAME
-    grp_skeleton = cmds.group( empty=True, name=GRP_SKELETON)
+def create_parts(MAIN_NAME, GRP_ALL, GRP_SKELETON, CTRL_MAIN, all_parts):
+    cmds.group(empty=True, name=GRP_SKELETON)
     cmds.parent(GRP_SKELETON, GRP_ALL)
+    all_parts.pop(0)
+    Skeleton.CTRL_MAIN = CTRL_MAIN
 
     for part in all_parts:
+        print(part)
         if 'Arm' in part:
             name = part.replace('Arm', '')
             arm = LimbSkeleton('Arm', name)
-            grp_skeleton = arm.grp_joints_main
-            cmds.parent(grp_skeleton, GRP_SKELETON)          
+            grp_skeleton_chain = arm.grp_joints_main      
         
-        if 'Leg' in part:
+        elif 'Leg' in part:
             name = part.replace('Leg', '')
             leg = LimbSkeleton('Leg', name)
-            grp_skeleton = leg.grp_joints_main
-            cmds.parent(grp_skeleton, GRP_SKELETON)
+            grp_skeleton_chain = leg.grp_joints_main
 
-        if 'Spine' in part:
+        elif 'Spine' in part:
             name = part.replace('Spine', '')
             spine = SpineSkeleton('Spine', name)
-            grp_skeleton = spine.grp_joints_main
-            cmds.parent(grp_skeleton, GRP_SKELETON)
+            grp_skeleton_chain = spine.grp_joints_main
 
-        if 'Neck' in part:
+        elif 'Neck' in part:
             name = part.replace('Neck', '')
             neck = NeckSkeleton('Neck', name)
-            grp_skeleton = neck.grp_joints_main
-            cmds.parent(grp_skeleton, GRP_SKELETON)
+            grp_skeleton_chain = neck.grp_joints_main
 
-        # cmds.parent(grp_skeleton, GRP_SKELETON) 
-        # PROBLEMS: When I do the parent at this level it gives me an error as if the grp_skeleton didn't exist
-        # I had to add it in every if for it to work I am guessing I am making a mistake when calling the class variable?
+        cmds.parent(grp_skeleton_chain, GRP_SKELETON) 
         print(f'Creating {part} rig system')   
         
-def delete_rig():
+def delete_rig(GRP_ALL):
     if cmds.objExists(GRP_ALL):
         cmds.delete(GRP_ALL)
 
     if cmds.objExists('blc_*'):
         cmds.delete('blc_*')
     
-# CUSTOM CONTROLS *******************************************************************
-def create_custom_controls(shape, ctl_name, s=1.25, normal=(1, 0, 0)):
+
+# CUSTOM CONTROLS ****************************************************************************************************************
+def create_custom_controls(shape, ctl_name, s=1.25, normal=(1, 0, 0), color=5):
     """Creates controls based on custom shapes
 
     Args:
@@ -825,6 +714,10 @@ def create_custom_controls(shape, ctl_name, s=1.25, normal=(1, 0, 0)):
     elif shape == 'circle':
         cmds.circle(name=ctl_name, normal=normal, radius=s)
         cmds.delete(ctl_name, constructionHistory=True)     
+
+    # Color
+    cmds.setAttr(f'{ctl_name}.overrideEnabled', 1)
+    cmds.setAttr(f'{ctl_name}.overrideColor', color)
     
     # Pivot on world center
     cmds.move(0, 0, 0, str(ctl_name) + '.scalePivot', str(ctl_name) + '.rotatePivot', worldSpace=True)
