@@ -17,10 +17,6 @@ CURRENT_PATH = os.path.dirname(__file__)
 sys.path.append(CURRENT_PATH)
 json_path = f'{CURRENT_PATH}\config.json'
 
-""" ********************************************************************************
-Look for the word 'PROBLEMS' for things I had trouble and could not figure out
-Look for the word 'QUESTIONS' for questions in context
-******************************************************************************** """
 
 # READ CONFIG FILE  *****************************************************************
 with open(json_path) as json_file:
@@ -519,11 +515,6 @@ class LimbSkeleton(Rig):
             cmds.parent(off_clavicle, self.CTRL_MAIN)
             
 class SpineSkeleton(Rig):
-    """why?
-        -Custom position for Switch control
-        -Different joint orientation
-        -Hip or center of gravity (cog) joint is oriented to world 
-    """
     def __init__(self, part, name):
         self.part = part
         self.name = name  
@@ -541,9 +532,6 @@ class SpineSkeleton(Rig):
         self.fkik_blend()
 
 class NeckSkeleton(Rig):
-    """why?
-        -Only needs to determine its skeleton secondary axis
-    """
     def __init__(self, part, name):
         self.part = part
         self.name = name  
@@ -590,12 +578,6 @@ def create_main_part(MAIN_NAME, GRP_ALL, CTRL_GLOBAL, CTRL_MAIN):
     create_custom_controls('circle', CTRL_GLOBAL, size*0.75, (0, 1, 0), color=17)
     create_custom_controls('circle', CTRL_MAIN, size*0.65, (0, 1, 0), color=18)
 
-    # for ctrl in main_ctrls: 
-    #     cmds.setAttr(f'{ctrl}Shape.overrideEnabled', 1)
-    
-    # cmds.setAttr(f'{CTRL_GLOBAL}Shape.overrideColor', 17)
-    # cmds.setAttr(f'{CTRL_MAIN}Shape.overrideColor', 18)
-        
     cmds.parent(off_main_ctrls[1], CTRL_GLOBAL)
     cmds.group(off_main_ctrls[0], name = GRP_ALL)
 
