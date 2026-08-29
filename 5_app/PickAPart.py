@@ -7,6 +7,7 @@ dependency  Maya, config.json
 
 author      Domenica Montesdeoca <https://www.linkedin.com/in/maydo3d/>
 *******************************************************************"""
+
 import os 
 import sys 
 import json
@@ -45,14 +46,15 @@ class Guides:
     """Contains the base variables and function to create a chain of locators under a group that will be used as guides per Part."""
 
     def __init__(self):
-        self.name = ''
-        self.side = data['suffix']['left']
+        # self.name = ''
         self.prefix_grp = data['prefix']['group']
 
         self.sections    = data['parts'][self.part]           
         self.translation = (0, 0, 0)
+
+        self.guide_grp_name = f'{self.prefix_grp}Guides_{self.part}{self.name}{self.side}'
         
-    def guide_creation(self):
+    def guide_creation(self, color):
         previous_guide = None
 
         # for nr in range(len(self.sections)):
@@ -65,11 +67,14 @@ class Guides:
             current_guide = cmds.spaceLocator(name=guide_name)[0]    
             cmds.setAttr(f'{guide_name}Shape.localScale', 5.0, 5.0, 5.0)
 
+            # Color
+            cmds.setAttr(f'{guide_name}.overrideEnabled', 1)
+            cmds.setAttr(f'{guide_name}.overrideColor', color)
+
             if previous_guide:
                 cmds.parent(current_guide, previous_guide) 
                 cmds.setAttr(f'{current_guide}.translate', self.translation[0], self.translation[1] ,self.translation[2])
             else:
-                self.guide_grp_name = f'{self.prefix_grp}Guides_{self.part}{self.name}{self.side}'
                 cmds.group(current_guide, name=self.guide_grp_name, absolute=False)
                 
             previous_guide = current_guide
@@ -82,23 +87,27 @@ class LimbGuide(Guides):
     """
     def __init__(self, part, name):
         self.part = part
+        self.name = name 
+        self.side = data['suffix']['left']
 
         super().__init__()
-        self.name = name
-
         if part == 'Arm':
             self.bend = data['parts']['Arm'][2]    # Elbow
-            self.translation = (12, 0, 0)
+            self.translation = (15, 0, 0)
             self.bend_translate = -10
+            color = 13
+            color_pv = 4
         else:
             self.bend = data['parts']['Leg'][1]    # Knee
-            self.translation = (0, -12, 0)
+            self.translation = (0, -15, 0)
             self.bend_translate = 10
+            color = 4
+            color_pv = 13
 
-        self.guide_creation()
-        self.pole_vector()
+        self.guide_creation(color)
+        self.pole_vector(color_pv)
 
-    def pole_vector(self):
+    def pole_vector(self, color_pv):
         # Create a guide for a Pole Vector
         guide_poleV = f'guide_PoleVector_{self.part}_{self.name}{self.side}'
 
@@ -106,6 +115,10 @@ class LimbGuide(Guides):
 
             guide_poleV = cmds.spaceLocator(name=guide_poleV)[0]
             cmds.setAttr(f'{guide_poleV}Shape.localScale', 5.0, 5.0, 5.0)
+
+            # Color
+            cmds.setAttr(f'{guide_poleV}.overrideEnabled', 1)
+            cmds.setAttr(f'{guide_poleV}.overrideColor', color_pv)
 
             guide_bend = f'guide_{self.bend}_{self.name}{self.side}'
             bend_position = cmds.xform(guide_bend, query=True, translation=True, worldSpace=True)
@@ -121,21 +134,21 @@ class SpineGuide(Guides):
     """
     def __init__(self, part, name):
         self.part = part
+        self.name = name 
+        self.side = data['suffix']['center']
 
         super().__init__()
-        self.name = name  
         self.translation = (0, 10, 0)  
-
-        self.guide_creation()
+        self.guide_creation(17)
 class NeckGuide(Guides):
     def __init__(self, part, name):
         self.part = part
+        self.name = name 
+        self.side = data['suffix']['center']
 
         super().__init__()
-        self.name = name  
         self.translation = (0, 5, 0)  
-
-        self.guide_creation()
+        self.guide_creation(14)
 
 @print_process
 def create_guides(MAIN_NAME, GUIDES, all_parts):
@@ -146,15 +159,19 @@ def create_guides(MAIN_NAME, GUIDES, all_parts):
         all_parts (list): List of all the Parts in the view tree
     """
     all_parts.pop(0)
+    print(f'ALL PARTS: {all_parts}')
 
     # Creates main guide group if it does not exist
     if not cmds.objExists(GUIDES):
         grp_all_guides = cmds.group(empty=True, name=GUIDES)
+
+    created_list = cmds.listRelatives(GUIDES, children=True) or []
+    for nr, created in enumerate(created_list):
+        created_list[nr] = created.split('_')[2]
     
     # Creates the guide for each part if id does not exist yet
     for part in all_parts:
-        if not cmds.objExists(f'*{part}*'):
-            print(part)
+        if part not in created_list:
             if 'Arm' in part:
                 name = part.replace('Arm', '')
                 arm  = LimbGuide('Arm', name)
@@ -190,7 +207,6 @@ class Skeleton:
      it for the systems the rig needs (FK, IK, IK Spline)"""
 
     def __init__(self):
-        self.side = '_L'
         self.prefix_jnt = data['prefix']['joint']
         self.prefix_grp = data['prefix']['group']
 
@@ -221,7 +237,9 @@ class Skeleton:
         cmds.joint(self.joint_list,e=True, orientJoint=self.orient_jnt, secondaryAxisOrient=self.secondary_axis)
         cmds.joint(self.joint_list[-1], e=True, orientJoint='none')
 
-        cmds.group(self.joint_list[0], name=self.grp_joints_main)
+        cmds.group(empty =True, name=self.grp_joints_main)
+        cmds.matchTransform(self.grp_joints_main, self.guide_list[0])
+        cmds.parent(self.joint_list[0], self.grp_joints_main)
 
     def duplicate_skeleton(self):
         # Duplicates the skeleton starting from the designated base for each system (FK, IK, etc)
@@ -262,13 +280,18 @@ class Rig(Skeleton):
         self.prefix_grp = data['prefix']['group']
 
         super().__init__()
-        self.grp_controlsFK = f'{self.prefix_grp}controls_FK_{self.part}{self.name}{self.side}'
-        self.grp_controlsIK = f'{self.prefix_grp}controls_IK_{self.part}{self.name}{self.side}'
+        self.grp_controlsFK  = f'{self.prefix_grp}controls_FK_{self.part}{self.name}{self.side}'
+        self.grp_controlsIK  = f'{self.prefix_grp}controls_IK_{self.part}{self.name}{self.side}'
+        # self.grp_controlsIKS = f'{self.prefix_grp}controls_IKS_{self.part}{self.name}{self.side}'
         self.IKFK_pos = [0, 0, 0]
+
+        self.grp_rig_main = f'{self.prefix_grp}Rig_{self.part}{self.name}{self.side}'
 
     def create_fk(self):
         # global self.CTRL_MAIN
         self.root_fk = self.joint_base.replace(self.prefix_jnt, f'{self.prefix_jnt}{self.systems[0]}')
+        cmds.group(empty=True, name=self.grp_controlsFK)
+        cmds.matchTransform(self.grp_controlsFK, self.root_fk)
 
         self.joints_fk = cmds.listRelatives(self.root_fk,allDescendents=True)
         self.joints_fk.append(self.root_fk)
@@ -278,7 +301,6 @@ class Rig(Skeleton):
         end_fk = self.joints_fk[2]
         offsets_fk = []
 
-        cmds.group(empty=True, name=self.grp_controlsFK)
         cmds.select(deselect=True)
 
         for nr, joint in enumerate(self.joints_fk):
@@ -328,6 +350,7 @@ class Rig(Skeleton):
     def create_ik(self):
         grp_controls = cmds.group(empty=True, name=self.grp_controlsIK)
         self.root_ik = self.joint_base.replace(self.prefix_jnt, f'{self.prefix_jnt}{self.systems[1]}')
+        cmds.matchTransform(self.grp_controlsIK, self.root_ik)
 
         self.joints_ik = cmds.listRelatives(self.root_ik,allDescendents=True)
         self.joints_ik.append(self.root_ik)
@@ -341,7 +364,9 @@ class Rig(Skeleton):
         
         if len(names_ik) > 3:
             name_root_ik = names_ik[0]
+            name_midBottnon_ik = names_ik[1]
             name_end_ik  = names_ik[-1]
+            name_end_ik  = names_ik[--2]
         else:
             name_root_ik, name_mid_ik, name_end_ik = names_ik
 
@@ -350,11 +375,11 @@ class Rig(Skeleton):
         ctl_poleIK = f'{self.prefix_ctl}IK_{self.part}PoleVector_{self.name}{self.side}'
         ctl_endIK  = f'{self.prefix_ctl}IK_{name_end_ik}Base_{self.name}{self.side}'
         ctl_rotIK  = f'{self.prefix_ctl}IKRot_{name_end_ik}Base_{self.name}{self.side}'
-        ctls_IK = [ctl_baseIK, ctl_poleIK, ctl_endIK, ctl_rotIK]  
+        controls_IK = [ctl_baseIK, ctl_poleIK, ctl_endIK, ctl_rotIK]  
         offsets_ik  = []
 
         # Get controls offset groups 
-        for ctl in ctls_IK:
+        for ctl in controls_IK:
             offs = ctl.replace(self.prefix_ctl, self.prefix_off)
             offsets_ik.append(offs)
 
@@ -378,13 +403,13 @@ class Rig(Skeleton):
         create_custom_controls('cube', ctl_endIK, 4, color=6)
         create_custom_controls('sphere', ctl_rotIK, 4, color=15)
 
-        if 'Leg' in self.part: 
-            cmds.setAttr(f'{off_endIK}.rotate', 0, 0, 0)
-
         # Positions controls
         cmds.matchTransform(off_baseIK, IK_start_jnt)
         cmds.matchTransform(off_endIK, IK_end_jnt)
         cmds.matchTransform(off_rotIK, IK_end_jnt)
+
+        if 'Leg' in self.part: 
+            cmds.setAttr(f'{off_endIK}.rotate', 0, 0, 0)
 
         # Create the control hierarchy
         cmds.parent(IK_handle, ctl_rotIK)
@@ -467,6 +492,198 @@ class Rig(Skeleton):
         cmds.setAttr(self.joints_fk[0] + '.visibility', 0)
         cmds.setAttr(self.joints_ik[0] + '.visibility', 0)
 
+    def create_ik_spline(self):
+        # grp_controls = cmds.group(empty=True, name=self.grp_controlsIKS)
+        self.root_iks = self.joint_base.replace(self.prefix_jnt, f'{self.prefix_jnt}IKS_')
+        # cmds.matchTransform(self.grp_controlsIKS, self.root_iks)
+
+        joints_iks = cmds.listRelatives(self.root_iks, allDescendents=True)
+        joints_iks.append(self.root_iks)
+        joints_iks.pop(0)
+        joints_iks.reverse()
+        print(f'TODOS LOS JOINTS: {joints_iks}')
+
+        names_jnt_iks = []
+        for joint in joints_iks:
+            joint = joint.split('_')[2]
+            names_jnt_iks.append(joint)
+        
+        if len(names_jnt_iks) > 3:
+            name_root_iks     = names_jnt_iks[0]
+            name_end_iks      = names_jnt_iks[-1]
+        else:
+            name_root_iks, name_mid_iks, name_end_iks = names_jnt_iks
+
+        # Create IK Spline
+        self.IKS_name = f'{self.part}{self.name}IKS'
+        IKS_handle    = f'ikH_{self.IKS_name}{self.side}'
+        IKS_effector  = f'eff_{self.IKS_name}{self.side}'
+        IKS_curve     = f'crv_{self.IKS_name}{self.side}'
+
+        IKS_start_jnt     = joints_iks[0]
+        IKS_sec_jnt      = joints_iks[1]
+        IKS_secLast_jnt  = joints_iks[-2]
+        IKS_end_jnt      = joints_iks[-1] 
+        # joints_iks.pop(0)
+
+        cmds.ikHandle(name=IKS_handle, startJoint=IKS_start_jnt, endEffector=IKS_end_jnt, solver='ikSplineSolver', 
+                      rootOnCurve=True, parentCurve=True, createCurve=True, simplifyCurve=True, numSpans=2)
+
+        effector = cmds.ikHandle(IKS_handle, q=True,  endEffector=True)
+        cmds.rename(effector, IKS_effector)
+
+        curveShape = (cmds.ikHandle(IKS_handle, q=True,  curve=True))
+        curve = cmds.listRelatives(curveShape, parent=True)[0]
+        cmds.rename(curve, IKS_curve)
+
+        # Control names and creation
+        ctl_base_iks = f'{self.prefix_ctl}IKS_Base{name_root_iks}_{self.name}{self.side}'
+        ctl_mid_iks  = f'{self.prefix_ctl}IKS_Mid_{self.name}{self.side}'
+        ctl_top_iks  = f'{self.prefix_ctl}IKS_Top_{name_end_iks}_{self.name}{self.side}'
+
+        ctl_baseSec_iks = f'{self.prefix_ctl}IKS_BaseSec{name_root_iks}_{self.name}{self.side}'
+        ctl_topSec_iks  = f'{self.prefix_ctl}IKS_TopSec{name_end_iks}_{self.name}{self.side}'
+
+        create_custom_controls('cube', ctl_base_iks, 4, color=17)
+        create_custom_controls('cube', ctl_mid_iks, 4, color=17)
+        create_custom_controls('cube', ctl_top_iks , 4, color=17)
+
+        create_custom_controls('double_circle', ctl_baseSec_iks, 3, color=14)
+        create_custom_controls('double_circle', ctl_topSec_iks, 3, color=14)
+
+        # Get control positions based on curve
+        cvs = cmds.ls(f'{IKS_curve}.cv[:]', flatten=True)
+        cv_positions = []
+        print(f'LISTA DE LOS CVS: {cvs}')
+
+        for cv in cvs:
+            position = cmds.xform(cv, q=True, worldSpace=True, translation=True)
+            cv_positions.append(position)
+
+        cv_basePos, cv_baseSecPos, cv_midPos, cv_topSecPos, cv_topSec = cv_positions
+        controls_IKS = [ctl_base_iks, ctl_baseSec_iks, ctl_mid_iks, ctl_topSec_iks, ctl_top_iks]
+        
+        joints_IKS = []
+        offsets_IKS = []
+        for ctl in controls_IKS:
+            joint = cmds.joint(name=ctl.replace(self.prefix_ctl, self.prefix_jnt))
+            cmds.matchTransform(joint, ctl)
+            cmds.parentConstraint(ctl, joint)
+            cmds.setAttr(f'{joint}.visibility', False)
+            
+            joints_IKS.append(joint)
+        
+            offs = ctl.replace(self.prefix_ctl, self.prefix_off)
+            offsets_IKS.append(offs)
+
+        jnt_base_iks, jnt_baseSec_iks, jnt_mid_iks, jnt_topSec_iks, jnt_top_iks = joints_IKS    
+        off_base_iks, off_baseSec_iks, off_mid_iks, off_topSec_iks, off_top_iks = offsets_IKS
+        last_off = offsets_IKS[-1]
+
+        for nr, offset in enumerate (offsets_IKS):
+            if nr == 0:
+                crv_A = cv_positions[nr]
+                crv_B = cv_positions[nr+1]
+                mid_position = [(crv_A[0] + crv_B[0])/2, (crv_A[1] + crv_B[1])/2, (crv_A[2] + crv_B[2])/2]
+                
+            elif offset == offsets_IKS[-1]:
+                crv_A = cv_positions[nr]
+                crv_B = cv_positions[nr-1]
+                mid_position = [(crv_A[0] + crv_B[0])/2, (crv_A[1] + crv_B[1])/2, (crv_A[2] + crv_B[2])/2]
+            else:
+                cmds.xform(offset, translation=cv_positions[nr])
+                continue
+
+            cmds.xform(offset, translation=mid_position)
+
+        # Controls and Rig hierarchy
+        grp_secJoints = f'{self.prefix_grp}SecJoints_{self.part}{self.name}{self.side}'
+        grp_rigJoints = f'{self.prefix_grp}RigJoints_{self.part}{self.name}{self.side}'
+        
+        cmds.group(empty=True, name = grp_secJoints)
+        cmds.group(empty=True, name = grp_rigJoints)
+        cmds.group(empty=True, name=self.grp_rig_main)
+        
+        # Add an extra group for pivot in Spine for direct connections instead of parent
+        root_jnt = cmds.listRelatives(self.joint_base, parent=True)[0]
+
+        if root_jnt:
+            self.grp_secJoints_extra = grp_secJoints.replace('SecJoints_', 'SecJointsExtra_')
+            cmds.group(empty=True, name = self.grp_secJoints_extra)
+            cmds.matchTransform(self.grp_secJoints_extra, root_jnt)
+            cmds.parent(self.grp_secJoints_extra, grp_secJoints)
+            cmds.parent(self.root_iks, IKS_handle, self.grp_secJoints_extra)
+            
+        else:            
+            cmds.parent(grp_secJoints, grp_secJoints)
+            cmds.parent(self.root_iks, IKS_handle, grp_secJoints)
+
+        cmds.parent(grp_rigJoints, grp_secJoints, self.grp_rig_main)
+        cmds.parent(joints_IKS, IKS_curve, grp_rigJoints)
+
+        # cmds.parent(offsets_IKS, self.grp_controlsIKS)
+        cmds.parent(off_baseSec_iks, ctl_base_iks)
+        cmds.parent(off_topSec_iks, ctl_top_iks)
+        # cmds.parent(self.grp_controlsIKS, self.CTRL_MAIN)
+
+        # Skin control joints to IK Spline Handle
+        cmds.skinCluster(joints_IKS, IKS_curve, maximumInfluences=1)
+
+        # TODO STRETCH
+
+        self.connect_skeletons(self.joints_main, joints_iks)
+        self.create_twist(IKS_end_jnt, IKS_start_jnt, ctl_top_iks, ctl_base_iks, IKS_handle)
+        off_base_hyb = self.create_hybrid_system(IKS_sec_jnt, IKS_secLast_jnt, off_top_iks, off_mid_iks)
+
+        return ctl_base_iks, off_base_iks, off_base_hyb
+
+    def connect_skeletons(self, main_skeleton, sec_skeleton, axes=['X', 'Y', 'Z'], attrs=['translate', 'rotate']):
+        for nr, joint in enumerate(main_skeleton):
+            for axis in axes:
+                for attr in attrs:
+                    cmds.connectAttr(f'{sec_skeleton[nr]}.{attr}{axis}', f'{joint}.{attr}{axis}', force=True)
+                    print(f'JOINT: {joint}, AXIS: {axis}, ATTR: {attr}')
+
+
+    def create_twist(self, joint_top, joint_base, control_top, control_base, ikHandle):
+        IKS_start = f'loc_TwistStart_{self.IKS_name}{self.side}'
+        IKS_end   = f'loc_TwistEnd_{self.IKS_name}{self.side}'
+
+        twist_locators = [IKS_end, IKS_start]
+        joints         = [joint_top, joint_base]
+        controls       = [control_top, control_base]
+
+        for nr, loc in enumerate(twist_locators):
+            cmds.spaceLocator(name=loc)[0]
+            cmds.matchTransform(loc, joints[nr])
+            cmds.parent(loc, controls[nr])
+            cmds.setAttr(f'{loc}.translate', self.twist_trans[0], self.twist_trans[1] ,self.twist_trans[2])
+            
+        cmds.setAttr(f'{ikHandle}.dTwistControlEnable', 1)
+        cmds.setAttr(f'{ikHandle}.dWorldUpType', 2)
+        cmds.connectAttr(f'{IKS_start}.worldMatrix[0]', f'{ikHandle}.dWorldUpMatrix', force=True)
+        cmds.connectAttr(f'{IKS_end}.worldMatrix[0]', f'{ikHandle}.dWorldUpMatrixEnd', force=True)
+    
+    def create_hybrid_system(self, base_sec, top_sec, off_top_iks, off_mid_iks):
+        # For spine and neck
+        # Control names and creation
+        ctl_base_hyb = f'{self.prefix_ctl}BaseFKH_{self.part}_{self.name}{self.side}'
+        ctl_top_hyb  = f'{self.prefix_ctl}TopFKH_{self.part}_{self.name}{self.side}'
+        off_base_hyb = ctl_base_hyb.replace(self.prefix_ctl, self.prefix_off)
+        off_top_hyb  = ctl_top_hyb.replace(self.prefix_ctl, self.prefix_off)
+
+        create_custom_controls('circle', ctl_base_hyb, 9, (1, 0, 0), color=23)
+        create_custom_controls('circle', ctl_top_hyb, 9, (1, 0, 0), color=23)
+
+        # Position controls
+        cmds.matchTransform(off_base_hyb, base_sec)
+        cmds.matchTransform(ctl_top_hyb, top_sec)
+
+        # Connections and hierarchy
+        cmds.parent(off_top_hyb, off_mid_iks, ctl_base_hyb)
+        cmds.parent(off_top_iks, ctl_top_hyb)
+        
+        return off_base_hyb
 class LimbSkeleton(Rig):
     """Contains the information needed for the rigging system of limbs(arms and legs), saves the pole vector guide to 
     use its position but deletes it to be able to create the rigging systems
@@ -477,6 +694,8 @@ class LimbSkeleton(Rig):
     def __init__(self, part, name):
         self.part = part
         self.name = name  
+        self.side = data['suffix']['left']
+        self.twist_trans = (0, 10, 0)
 
         super().__init__()
         self.guide_poleV = self.guide_list[-1]  
@@ -485,7 +704,7 @@ class LimbSkeleton(Rig):
         if part == 'Arm':
             self.bend     = data['parts']['Arm'][2]    # Elbow
             self.base     = data['parts']['Arm'][1]    # Shoulder
-            self.clavicle = data['parts']['Arm'][0] 
+            # self.clavicle = data['parts']['Arm'][0] 
             self.IKFK_pos = [0, 10, 0]
             self.secondary_axis = 'yup'
         else:
@@ -501,10 +720,10 @@ class LimbSkeleton(Rig):
 
         # Creates the clavicle and parents all arm controls to it
         if part == 'Arm':
-            jnt_clavicle = f'{self.prefix_jnt}{self.clavicle}_{self.name}{self.side}'
+            jnt_clavicle = cmds.listRelatives(self.joint_base, parent=True)[0]
             ctl_clavicle = jnt_clavicle.replace(self.prefix_jnt, self.prefix_ctl)
             off_clavicle = jnt_clavicle.replace(self.prefix_jnt, self.prefix_off)
-            create_custom_controls('lever', ctl_clavicle, 4, color=6)
+            create_custom_controls('flat_lever', ctl_clavicle, 4, color=6)
 
             cmds.matchTransform(off_clavicle, jnt_clavicle)
             cmds.setAttr(f'{off_clavicle}.rotateX', 90)
@@ -517,38 +736,70 @@ class LimbSkeleton(Rig):
 class SpineSkeleton(Rig):
     def __init__(self, part, name):
         self.part = part
-        self.name = name  
+        self.name = name
+        self.side = data['suffix']['center']
+        self.twist_trans = (0, 0, -15)
 
         super().__init__()
         self.IKFK_pos = [0, 10, 10]
+        self.orient_jnt     = 'xyz'
         self.secondary_axis = 'zdown'
+
+        self.systems  = ['IKS_']
+        self.base     = data['parts']['Spine'][1] 
 
         self.create_skeleton()
         cmds.joint(self.joint_list[0], e=True, orientJoint='none')      # Makes the hip joint be oriented to world
 
         self.duplicate_skeleton()
-        self.create_fk()
-        self.create_ik()    # This will be replaced for an IK Spline
-        self.fkik_blend()
+        ctl_base_iks, off_base_iks, off_base_hyb = self.create_ik_spline()
+
+        # Names for COG Controls
+        jnt_cog = cmds.listRelatives(self.joint_base, parent=True)[0]
+
+        ctl_root_spine = f'{self.prefix_ctl}Root_{self.part}_{self.name}{self.side}'
+        ctl_hip  = f'{self.prefix_ctl}Hip_{self.part}_{self.name}{self.side}'
+        off_root_spine = ctl_root_spine.replace(self.prefix_ctl, self.prefix_off)
+        off_hip  = ctl_hip.replace(self.prefix_ctl, self.prefix_off)
+
+        # Control creation and hierarchy
+        create_custom_controls('circle', ctl_root_spine, 9, (0, 1, 0), color=17)
+        create_custom_controls('circle', ctl_hip, 7, (0, 1, 0), color=14)
+
+        cmds.matchTransform(off_root_spine, off_hip, jnt_cog)
+
+        cmds.parent(off_root_spine, self.CTRL_MAIN)
+        cmds.parent(off_base_iks, ctl_root_spine)
+        cmds.parent(off_hip, ctl_base_iks)
+        cmds.parent(off_base_hyb, ctl_root_spine)
+
+        # Connect Root Joint to control
+        cmds.parentConstraint(ctl_hip, jnt_cog, maintainOffset=True)
+
+        # Connect extra group to pivot from root
+        cmds.parentConstraint(ctl_hip, self.grp_secJoints_extra, maintainOffset=True)
 
 class NeckSkeleton(Rig):
     def __init__(self, part, name):
         self.part = part
-        self.name = name  
+        self.name = name
+        self.side = data['suffix']['center']
+        self.twist_trans = (0, 0, -15)
 
         super().__init__()
         self.IKFK_pos =[ 0, 5, -10]
         self.secondary_axis = 'zdown'
+
+        self.systems  = ['IKS_']
+        self.base     = data['parts']['Neck'][0] 
         
         self.create_skeleton()
         self.duplicate_skeleton()
-        self.create_fk()
-        self.create_ik()    # This will be replaced for an IK Spline
-        self.fkik_blend()
+        self.create_ik_spline()
 
 
 @print_process
-def create_rig(MAIN_NAME, GRP_ALL, CTRL_GLOBAL, CTRL_MAIN, GRP_SKELETON, all_parts):
+def create_rig(MAIN_NAME, GRP_ALL, CTRL_GLOBAL, CTRL_MAIN, GRP_SKELETON, GRP_RIG, all_parts):
     """Pre-established name nomenclature 
 
     Args:
@@ -560,7 +811,7 @@ def create_rig(MAIN_NAME, GRP_ALL, CTRL_GLOBAL, CTRL_MAIN, GRP_SKELETON, all_par
         all_parts (list): List containing all parts from the view tree
     """
     create_main_part(MAIN_NAME, GRP_ALL, CTRL_GLOBAL, CTRL_MAIN)
-    create_parts(MAIN_NAME, GRP_ALL, GRP_SKELETON, CTRL_MAIN, all_parts)
+    create_parts(MAIN_NAME, GRP_ALL, CTRL_MAIN, GRP_SKELETON, GRP_RIG, all_parts)
 
 def create_main_part(MAIN_NAME, GRP_ALL, CTRL_GLOBAL, CTRL_MAIN):
     """Creates the main group and controls for the rig
@@ -584,9 +835,10 @@ def create_main_part(MAIN_NAME, GRP_ALL, CTRL_GLOBAL, CTRL_MAIN):
     cmds.addAttr(CTRL_GLOBAL, longName='Global_Scale', attributeType='float', defaultValue=1, 
                  minValue=1, maxValue=100, keyable=True)
 
-def create_parts(MAIN_NAME, GRP_ALL, GRP_SKELETON, CTRL_MAIN, all_parts):
+def create_parts(MAIN_NAME, GRP_ALL, CTRL_MAIN, GRP_SKELETON, GRP_RIG, all_parts):
     cmds.group(empty=True, name=GRP_SKELETON)
-    cmds.parent(GRP_SKELETON, GRP_ALL)
+    cmds.group(empty=True, name=GRP_RIG)
+    cmds.parent(GRP_SKELETON, GRP_RIG, GRP_ALL)
     all_parts.pop(0)
     Skeleton.CTRL_MAIN = CTRL_MAIN
 
@@ -595,24 +847,30 @@ def create_parts(MAIN_NAME, GRP_ALL, GRP_SKELETON, CTRL_MAIN, all_parts):
         if 'Arm' in part:
             name = part.replace('Arm', '')
             arm = LimbSkeleton('Arm', name)
-            grp_skeleton_chain = arm.grp_joints_main      
+            grp_skeleton_chain = arm.grp_joints_main
+            grp_rig = arm.grp_rig_main
         
         elif 'Leg' in part:
             name = part.replace('Leg', '')
             leg = LimbSkeleton('Leg', name)
             grp_skeleton_chain = leg.grp_joints_main
+            grp_rig = leg.grp_rig_main
 
         elif 'Spine' in part:
             name = part.replace('Spine', '')
             spine = SpineSkeleton('Spine', name)
             grp_skeleton_chain = spine.grp_joints_main
+            grp_rig = spine.grp_rig_main
 
         elif 'Neck' in part:
             name = part.replace('Neck', '')
             neck = NeckSkeleton('Neck', name)
             grp_skeleton_chain = neck.grp_joints_main
+            grp_rig = neck.grp_rig_main
 
-        cmds.parent(grp_skeleton_chain, GRP_SKELETON) 
+        cmds.parent(grp_skeleton_chain, GRP_SKELETON)
+        if cmds.objExists(grp_rig):
+            cmds.parent(grp_rig, GRP_RIG)
         print(f'Creating {part} rig system')   
         
 def delete_rig(GRP_ALL):
@@ -639,9 +897,16 @@ def create_custom_controls(shape, ctl_name, s=1.25, normal=(1, 0, 0), color=5):
                     (-s, s, s), (-s, -s, s), (s, -s, s), (s, s, s)]
         crv_curve = cmds.curve(point=points, degree=1, name=ctl_name)
 
+    # elif shape == 'frame':
+    #     points = [(-s, -s/4, s), (-s, s/4, s), (0, s/4, s), (s, s/4, s), (s, -s/4, s), (0, -s/4, s), (-s, -s/4, s),
+    #               (-s, -s/4, 0), (-s, -s/4, -s), (-s, s/4, -s), (-s, s/4, 0), (-s, s/4, s),
+    #               (s, s/4, s), (s, s/4, -s), (s, s/4, 0), (s, s/4, s), (s, -s/4, s), (s, -s/4, 0), (s, -s/4, -s),
+    #               (0, -s/4, -s), (-s, -s/4, -s), (-s, s/4, -s), (0, s/4, -s), (s, s/4, -s), (s, -s/4, -s)]
+    #     crv_curve = cmds.curve(point=points, degree=1, name=ctl_name)
+
     elif shape == 'cone':
         s = s*0.5
-        points =[(-s, 0, s), (0, s*2, 0), (s, 0, s), (-s, 0, s),
+        points = [(-s, 0, s), (0, s*2, 0), (s, 0, s), (-s, 0, s),
                     (-s, 0, -s), (0, s*2, 0), (s, 0, -s), (-s, 0, -s),
                     (s, 0, -s), (s, 0, s)]
         crv_curve = cmds.curve(point=points, degree=1, name=ctl_name)
@@ -671,7 +936,36 @@ def create_custom_controls(shape, ctl_name, s=1.25, normal=(1, 0, 0), color=5):
 
         for circle in circles_list[1:]:
             cmds.delete(circle)
-    
+
+    elif shape == 'double_circle':
+        circle_f = cmds.circle(name=ctl_name, normal=(0,0,1), radius=s)
+        circle_b = cmds.circle(name=ctl_name + '02', normal=(0,0,1), radius=s)
+        
+        cmds.setAttr(f'{circle_f[0]}.translateZ', s)
+        cmds.setAttr(f'{circle_b[0]}.translateZ', -s)
+        cmds.delete(ctl_name, constructionHistory=True)
+
+        circles_list = [f'{circle_f[0]}', f'{circle_b[0]}']
+        shape_list = []
+
+        for circle in circles_list:
+            cmds.makeIdentity(circle, apply=True)
+            shape = str(circle) + 'Shape'
+            shape_list.append(shape)
+
+        cmds.select(shape_list[1])
+        cmds.select(ctl_name, add=True)
+        mel.eval('parent -r -s')
+
+        cmds.delete(ctl_name, constructionHistory=True)
+
+        cmds.delete(circles_list[1])
+
+    elif shape == 'flat_lever':
+        points = [(0, 0, 0), (0, s, 0), (s/2, s*1.33, 0), (s/2, s*2, 0), (-s/2, s*2, 0), (-s/2, s*1.33, 0), (0, s, 0)]
+        crv_curve = cmds.curve(point=points, degree=1, name=ctl_name)
+
+
     elif shape == 'sphere':
         circle_x = cmds.circle(name=ctl_name, normal=(1, 0, 0), radius=s)
         circle_y = cmds.circle(name=ctl_name+'02',normal=(0, 1, 0), radius=s)
@@ -694,8 +988,8 @@ def create_custom_controls(shape, ctl_name, s=1.25, normal=(1, 0, 0), color=5):
             cmds.delete(circle)
     
     elif shape == 'circle':
-        cmds.circle(name=ctl_name, normal=normal, radius=s)
-        cmds.delete(ctl_name, constructionHistory=True)     
+        circle = cmds.circle(name=ctl_name, normal=normal, radius=s)
+        cmds.delete(ctl_name, constructionHistory=True)
 
     # Color
     cmds.setAttr(f'{ctl_name}.overrideEnabled', 1)

@@ -42,8 +42,9 @@ user_data = {
 
     },
     'suffix': {
-        'right' : '_R',
-        'left'  : '_L'
+        'right'  : '_R',
+        'left'   : '_L',
+        'center' : '_C'
     }
 }
 

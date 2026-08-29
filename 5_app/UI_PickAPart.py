@@ -46,6 +46,7 @@ class UI():
         self.wgPick = QtCompat.loadUi(UI_PATH)
 
         self.ui_title = 'Pick-A-Part'
+        
         # Close if already exists
         if cmds.window(self.ui_title, exists=True):
             cmds.deleteUI(self.ui_title)
@@ -149,9 +150,10 @@ class UI():
         CTRL_GLOBAL  = f'{prefix_ctl}Global{self.MAIN_NAME}_C'
         CTRL_MAIN    = f'{prefix_ctl}Main{self.MAIN_NAME}_C'
         GRP_SKELETON = f'{prefix_grp}Skeleton{self.MAIN_NAME}'
+        GRP_RIG = f'{prefix_grp}Rig{self.MAIN_NAME}'
 
         self.all_parts = self.get_items_hierarchy(self.model_tree.invisibleRootItem())
-        pick.create_rig(self.MAIN_NAME, self.GRP_ALL, CTRL_GLOBAL, CTRL_MAIN, GRP_SKELETON, self.all_parts)
+        pick.create_rig(self.MAIN_NAME, self.GRP_ALL, CTRL_GLOBAL, CTRL_MAIN, GRP_SKELETON, GRP_RIG, self.all_parts)
 
 # Start UI ***********************************************************************************************************************
 def load():

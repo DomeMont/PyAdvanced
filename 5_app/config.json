@@ -116,6 +116,7 @@
     },
     "suffix": {
         "right": "_R",
-        "left": "_L"
+        "left": "_L",
+        "center": "_C"
     }
 }
