@@ -2,7 +2,7 @@
 Pick-A-Part UI
 content     Qt Designer UI
 
-date        17/08/2026
+date        04/09/2026
 dependency  Maya
 how_to      load()
 
@@ -13,7 +13,7 @@ import os
 import sys 
 import json
 import importlib
-import webbrowser 
+import webbrowser
 
 CURRENT_PATH = os.path.dirname(__file__)
 TITLE = os.path.splitext(os.path.basename(__file__))
@@ -45,7 +45,7 @@ class UI():
         UI_PATH = "/".join([CURRENT_PATH, "ui", 'PickAPart' + ".ui"])
         self.wgPick = QtCompat.loadUi(UI_PATH)
 
-        self.ui_title = 'Pick-A-Part'
+        self.ui_title = self.wgPick.windowTitle()
         
         # Close if already exists
         if cmds.window(self.ui_title, exists=True):
@@ -53,10 +53,9 @@ class UI():
 
         self.wgPick.setObjectName(self.ui_title)
         self.wgPick.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint) 
-        """ How could I make it be only on top of Maya?"""
 
         # SIGNALS ****************************************************************************************************************
-        self.wgPick.btnAddPart.clicked.connect(self.add_part)     # Add Part
+        self.wgPick.btnAddPart.clicked.connect(self.btn_add_part)     # Add Part
         self.model_tree = QtGui.QStandardItemModel()              # Create a container for the tree view
         # self.model_tree.setHorizontalHeaderLabels(['Parts'])    # Add more items for more columns
         self.wgPick.treeView.setModel(self.model_tree)            # Make the tree view read the info from model_tree
@@ -64,6 +63,7 @@ class UI():
         self.model_tree.appendRow(self.main_part)                 # Set 'Main' as a item in the hierarchy
         self.wgPick.treeView.expandAll()                          # Make all items visible from the start
 
+        self.wgPick.btnParentPart.clicked.connect(self.btn_parent_part)                         # Parent Part
         self.wgPick.btnDeletePart.clicked.connect(lambda *_: self.delete_confirm('part'))       # Delete Part
 
         self.wgPick.btnCreateGuides.clicked.connect(self.btn_create_guides)                     # Create Guides
@@ -71,12 +71,14 @@ class UI():
 
         self.wgPick.btnCreateRig.clicked.connect(self.btn_create_rig)                           # Create Rig
         self.wgPick.btnDeleteRig.clicked.connect(lambda *_: self.delete_confirm('rig'))         # Delete Rig
+        self.wgPick.btnAboutMe.clicked.connect(lambda *_: self.open_websites('about'))
+        self.wgPick.btnHelp.clicked.connect(lambda *_: self.open_websites('help'))
 
-        # SHOW UI ****************************************************************************************************************
+        # SHOW UI 
         self.wgPick.show()
 
     # FUNCTIONALITIES ************************************************************************************************************
-    def add_part(self):
+    def btn_add_part(self):
         self.MAIN_NAME = self.wgPick.lneMainInput.text()
         current_part = self.wgPick.cbParts.currentText()
         hierarchy = None
@@ -91,11 +93,42 @@ class UI():
 
         # Add .00 to the added parts
         current_part = f"{current_part}{version:02d}"
-        # print(current_part)
         part = QtGui.QStandardItem(current_part)
-        self.main_part.appendRow(part)        
 
-    def delete_part(self):
+        # parent to selected part
+        selected_part = self.wgPick.treeView.selectionModel().selectedRows() 
+        if selected_part:
+            parent = self.model_tree.itemFromIndex(selected_part[0])
+            parent.appendRow(part)
+        else:        
+            self.main_part.appendRow(part)
+
+    def btn_parent_part(self):
+        selected_parts = self.wgPick.treeView.selectionModel().selectedRows() 
+
+        if len(selected_parts) < 2:
+            print('Select at least 2 items')
+            return
+
+        new_parent = self.model_tree.itemFromIndex(selected_parts[-1])
+
+        for nr in range(len(selected_parts[:-1])):
+            part = self.model_tree.itemFromIndex(selected_parts[nr])
+            old_parent = part.parent()
+            row = old_parent.takeRow(part.row())
+            new_parent.appendRow(row)
+
+        self.all_parts = self.get_items_hierarchy(self.model_tree.invisibleRootItem())
+
+        parts_hierarchy =  {}
+        for nr, part in enumerate(self.all_parts[1:]):
+            part = self.model_tree.findItems(part, QtCore.Qt.MatchExactly | QtCore.Qt.MatchRecursive)[0]
+            parent = part.parent()
+
+            parts_hierarchy[f'Part: {part.text()}'] = f'Parent: {parent.text()}'
+        print(parts_hierarchy)
+
+    def btn_delete_part(self):
         selected_part = self.wgPick.treeView.selectionModel().selectedRows()[0]
         item = self.model_tree.itemFromIndex(selected_part)
 
@@ -114,7 +147,7 @@ class UI():
 
         if btn_confirm == QtWidgets.QMessageBox.Yes:
             if step=='part':
-                self.delete_part()
+                self.btn_delete_part()
             elif step=='guides':
                 pick.delete_guides(self.GUIDES)
             elif step=='rig':
@@ -136,7 +169,7 @@ class UI():
 
             if part.hasChildren():
                 all_parts.extend(self.get_items_hierarchy(part))
-        # print(all_parts)
+
         return all_parts
     
     def btn_create_guides(self):
@@ -151,9 +184,18 @@ class UI():
         CTRL_MAIN    = f'{prefix_ctl}Main{self.MAIN_NAME}_C'
         GRP_SKELETON = f'{prefix_grp}Skeleton{self.MAIN_NAME}'
         GRP_RIG = f'{prefix_grp}Rig{self.MAIN_NAME}'
+        CTRL_SIZE = self.wgPick.slControlSize.value()
 
         self.all_parts = self.get_items_hierarchy(self.model_tree.invisibleRootItem())
-        pick.create_rig(self.MAIN_NAME, self.GRP_ALL, CTRL_GLOBAL, CTRL_MAIN, GRP_SKELETON, GRP_RIG, self.all_parts)
+        pick.create_rig(self.GUIDES, self.MAIN_NAME, self.GRP_ALL, CTRL_GLOBAL, CTRL_MAIN, GRP_SKELETON, 
+                        GRP_RIG, self.all_parts, CTRL_SIZE)
+
+    def open_websites(self, site):
+        if site == 'about':
+            webbrowser.open('https://www.linkedin.com/in/maydo3d/')
+        if site == 'help':
+            webbrowser.open(f'https://github.com/DomeMont/PyAdvanced/wiki/How-to-use-Pick%E2%80%90A%E2%80%90Part')
+
 
 # Start UI ***********************************************************************************************************************
 def load():

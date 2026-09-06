@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>350</width>
-    <height>411</height>
+    <width>321</width>
+    <height>474</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -25,7 +25,7 @@
   <property name="maximumSize">
    <size>
     <width>500</width>
-    <height>700</height>
+    <height>560</height>
    </size>
   </property>
   <property name="font">
@@ -57,7 +57,7 @@ QPushButton {
 	background-color: rgb(93, 93, 93);
 	color: rgb(238, 238, 238);
 	border: none;
-	min-height: 22px;
+	min-height: 29px;
 	min-width: 60px;
 }
 QPushButton#btnTreeView{
@@ -65,6 +65,7 @@ QPushButton#btnTreeView{
 }
 QPushButton:hover {
 	background-color: rgb(112, 112, 112);
+	height: 6px;
 }
 QPushButton:pressed {
 	background-color: rgb(29, 29, 29);
@@ -116,12 +117,32 @@ QTreeView{
 	color: rgb(238, 238, 238);
 	border: 0px;
 	background-color: rgb(43, 43, 43);
-}</string>
+}
+
+QSlider::groove:horizontal {
+	background: rgb(43, 43, 43);
+	height: 4px;
+}
+
+QSlider::handle:horizontal {	
+	background: rgb(189, 189, 189);
+	height: 12px;
+	width: 7px;
+	margin: -5px 0;
+}
+
+QSpinBox {
+	background: rgb(43, 43, 43);
+	color: rgb(189, 189, 189);
+	border: 1px solid rgb(43, 43, 43);
+     padding: 2px 4px;
+}
+</string>
   </property>
   <property name="locale">
    <locale language="English" country="UnitedStates"/>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,2,0,0">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0,0,0,0,2,0,0">
    <property name="spacing">
     <number>4</number>
    </property>
@@ -129,7 +150,7 @@ QTreeView{
     <number>6</number>
    </property>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,0">
+    <layout class="QVBoxLayout" name="MainGroupName" stretch="0,0">
      <property name="spacing">
       <number>7</number>
      </property>
@@ -160,12 +181,10 @@ QTreeView{
         <font>
          <family>Segoe UI</family>
          <pointsize>-1</pointsize>
-         <weight>75</weight>
-         <bold>true</bold>
         </font>
        </property>
        <property name="text">
-        <string>SELECT MAIN GROUP NAME</string>
+        <string>INPUT MAIN GROUP NAME</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -177,7 +196,7 @@ QTreeView{
        <property name="minimumSize">
         <size>
          <width>0</width>
-         <height>17</height>
+         <height>18</height>
         </size>
        </property>
        <property name="maximumSize">
@@ -191,6 +210,9 @@ QTreeView{
          <family>Segoe UI</family>
          <pointsize>-1</pointsize>
         </font>
+       </property>
+       <property name="toolTip">
+        <string>Will define the group name of the rig</string>
        </property>
        <property name="styleSheet">
         <string notr="true"/>
@@ -210,7 +232,7 @@ QTreeView{
     </widget>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0,1,0">
+    <layout class="QVBoxLayout" name="AddParts" stretch="0,0,1,0">
      <property name="topMargin">
       <number>7</number>
      </property>
@@ -235,8 +257,6 @@ QTreeView{
         <font>
          <family>Segoe UI</family>
          <pointsize>-1</pointsize>
-         <weight>75</weight>
-         <bold>true</bold>
         </font>
        </property>
        <property name="text">
@@ -248,7 +268,7 @@ QTreeView{
       </widget>
      </item>
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,2,3">
+      <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,2">
        <property name="topMargin">
         <number>5</number>
        </property>
@@ -256,34 +276,15 @@ QTreeView{
         <number>5</number>
        </property>
        <item>
-        <widget class="QLabel" name="lblPart">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>15</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>30</width>
-           <height>16777215</height>
-          </size>
-         </property>
-         <property name="text">
-          <string>Part</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item>
         <widget class="QComboBox" name="cbParts">
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>25</height>
+           <height>28</height>
           </size>
+         </property>
+         <property name="toolTip">
+          <string>Select the desired Part</string>
          </property>
          <item>
           <property name="text">
@@ -322,8 +323,11 @@ QTreeView{
          <property name="minimumSize">
           <size>
            <width>60</width>
-           <height>22</height>
+           <height>29</height>
           </size>
+         </property>
+         <property name="toolTip">
+          <string>Adds the selected Part to the view tree</string>
          </property>
          <property name="autoFillBackground">
           <bool>false</bool>
@@ -370,6 +374,8 @@ QTreeView{
           <string notr="true">QPushButton {
 	text-align: left;
 	padding-left: 10px;
+	max-height: 17px;
+	min-height: 17px;
 }</string>
          </property>
          <property name="text">
@@ -391,7 +397,7 @@ QTreeView{
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>10</height>
+           <height>75</height>
           </size>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_7" stretch="0">
@@ -412,6 +418,18 @@ QTreeView{
           </property>
           <item>
            <widget class="QTreeView" name="treeView">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>75</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Shows the current Parts to be used</string>
+            </property>
+            <property name="selectionMode">
+             <enum>QAbstractItemView::ExtendedSelection</enum>
+            </property>
             <property name="headerHidden">
              <bool>true</bool>
             </property>
@@ -423,50 +441,64 @@ QTreeView{
       </layout>
      </item>
      <item>
-      <widget class="QPushButton" name="btnDeletePart">
-       <property name="minimumSize">
-        <size>
-         <width>60</width>
-         <height>22</height>
-        </size>
+      <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="2,1">
+       <property name="topMargin">
+        <number>0</number>
        </property>
-       <property name="font">
-        <font>
-         <family>Segoe UI</family>
-         <pointsize>-1</pointsize>
-        </font>
+       <property name="bottomMargin">
+        <number>0</number>
        </property>
-       <property name="text">
-        <string>Delete Part</string>
-       </property>
-      </widget>
+       <item>
+        <widget class="QPushButton" name="btnParentPart">
+         <property name="toolTip">
+          <string>Parents the selected Parts to the one selected last</string>
+         </property>
+         <property name="text">
+          <string>Parent Part</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnDeletePart">
+         <property name="minimumSize">
+          <size>
+           <width>60</width>
+           <height>29</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <family>Segoe UI</family>
+           <pointsize>-1</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Deletes the selected Part in the view tree</string>
+         </property>
+         <property name="text">
+          <string>Delete Part</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
     </layout>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout_5" stretch="1,0,0,0">
-     <property name="spacing">
-      <number>3</number>
+    <widget class="Line" name="line_4">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
      </property>
-     <property name="leftMargin">
-      <number>0</number>
-     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QVBoxLayout" name="CreateGuides">
      <property name="topMargin">
-      <number>0</number>
-     </property>
-     <property name="rightMargin">
       <number>0</number>
      </property>
      <property name="bottomMargin">
       <number>0</number>
      </property>
-     <item>
-      <widget class="Line" name="line_2">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="2,1">
        <property name="leftMargin">
@@ -486,7 +518,7 @@ QTreeView{
          <property name="minimumSize">
           <size>
            <width>60</width>
-           <height>22</height>
+           <height>29</height>
           </size>
          </property>
          <property name="maximumSize">
@@ -494,6 +526,9 @@ QTreeView{
            <width>16777215</width>
            <height>16777215</height>
           </size>
+         </property>
+         <property name="toolTip">
+          <string>Creates the guides. Can be clicked again to create new guide Parts</string>
          </property>
          <property name="text">
           <string>Create Guides</string>
@@ -505,8 +540,11 @@ QTreeView{
          <property name="minimumSize">
           <size>
            <width>60</width>
-           <height>22</height>
+           <height>29</height>
           </size>
+         </property>
+         <property name="toolTip">
+          <string>Deletes ALL guides</string>
          </property>
          <property name="text">
           <string>Delete Guides</string>
@@ -515,13 +553,184 @@ QTreeView{
        </item>
       </layout>
      </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QVBoxLayout" name="ControlSize">
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
      <item>
-      <widget class="Line" name="line_3">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+      <layout class="QVBoxLayout" name="verticalLayout_5" stretch="1,0,0">
+       <property name="spacing">
+        <number>3</number>
        </property>
-      </widget>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="Line" name="line_2">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="verticalLayout_6">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>7</number>
+         </property>
+         <property name="bottomMargin">
+          <number>5</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="btnControlSizeVisibility">
+           <property name="minimumSize">
+            <size>
+             <width>70</width>
+             <height>17</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QPushButton {
+	text-align: left;
+	padding-left: 10px;
+	max-height: 17px;
+	min-height: 17px;
+}</string>
+           </property>
+           <property name="text">
+            <string>▼   Controls Size (cm)</string>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="widget" native="true">
+           <property name="minimumSize">
+            <size>
+             <width>10</width>
+             <height>35</height>
+            </size>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_11">
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_10">
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="0,0">
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
+                <item>
+                 <widget class="QSlider" name="slControlSize">
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>10</height>
+                   </size>
+                  </property>
+                  <property name="sizeIncrement">
+                   <size>
+                    <width>0</width>
+                    <height>0</height>
+                   </size>
+                  </property>
+                  <property name="toolTip">
+                   <string>Defines the size of all rig controls</string>
+                  </property>
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <number>100</number>
+                  </property>
+                  <property name="sliderPosition">
+                   <number>1</number>
+                  </property>
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                  <property name="tickInterval">
+                   <number>1</number>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="spbControlSize">
+                  <property name="minimumSize">
+                   <size>
+                    <width>50</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                  <property name="toolTip">
+                   <string>Defines the size of all rig controls</string>
+                  </property>
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <number>100</number>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="Line" name="line_3">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QVBoxLayout" name="CreateRig">
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="2,1">
        <property name="leftMargin">
@@ -541,8 +750,11 @@ QTreeView{
          <property name="minimumSize">
           <size>
            <width>60</width>
-           <height>22</height>
+           <height>29</height>
           </size>
+         </property>
+         <property name="toolTip">
+          <string>Use all previus information to create the rig</string>
          </property>
          <property name="text">
           <string>Create Rig</string>
@@ -554,8 +766,11 @@ QTreeView{
          <property name="minimumSize">
           <size>
            <width>60</width>
-           <height>22</height>
+           <height>29</height>
           </size>
+         </property>
+         <property name="toolTip">
+          <string>Deletes ALL items of the rig</string>
          </property>
          <property name="text">
           <string>Delete Rig</string>
@@ -574,10 +789,108 @@ QTreeView{
      <property name="sizeHint" stdset="0">
       <size>
        <width>20</width>
-       <height>1</height>
+       <height>20</height>
       </size>
      </property>
     </spacer>
+   </item>
+   <item>
+    <widget class="Line" name="line_5">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="3,1,1">
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="font">
+        <font>
+         <family>Segoe UI</family>
+         <pointsize>-1</pointsize>
+         <weight>3</weight>
+         <italic>false</italic>
+         <bold>false</bold>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">font: 25 9px &quot;Segoe UI&quot;;</string>
+       </property>
+       <property name="text">
+        <string>Developed by: Doménica Montesdeoca</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnAboutMe">
+       <property name="toolTip">
+        <string>LinkedIn</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">/*Button*/
+
+QPushButton {    	
+	background-color: rgb(93, 93, 93);
+	color: rgb(238, 238, 238);
+	border: none;
+	min-height:15px;
+	min-width: 20px;
+	font: 8px &quot;Segoe UI&quot;;
+}
+
+QPushButton:hover {
+	background-color: rgb(112, 112, 112);
+	height: 6px;
+}
+QPushButton:pressed {
+	background-color: rgb(29, 29, 29);
+}
+</string>
+       </property>
+       <property name="text">
+        <string>About Me</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnHelp">
+       <property name="toolTip">
+        <string>Documentation website</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">/*Button*/
+
+QPushButton {    	
+	background-color: rgb(93, 93, 93);
+	color: rgb(238, 238, 238);
+	border: none;
+	min-height:15px;
+	min-width: 20px;
+	font: 8px &quot;Segoe UI&quot;;
+}
+
+QPushButton:hover {
+	background-color: rgb(112, 112, 112);
+	height: 6px;
+}
+QPushButton:pressed {
+	background-color: rgb(29, 29, 29);
+}
+</string>
+       </property>
+       <property name="text">
+        <string>Help</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>
@@ -589,7 +902,6 @@ QTreeView{
   <tabstop>btnDeleteGuides</tabstop>
   <tabstop>btnCreateRig</tabstop>
   <tabstop>btnDeleteRig</tabstop>
-  <tabstop>btnDeletePart</tabstop>
  </tabstops>
  <resources/>
  <connections>
@@ -600,12 +912,92 @@ QTreeView{
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>150</x>
-     <y>108</y>
+     <x>158</x>
+     <y>150</y>
     </hint>
     <hint type="destinationlabel">
      <x>212</x>
-     <y>225</y>
+     <y>173</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>slControlSize</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>spbControlSize</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>60</x>
+     <y>368</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>303</x>
+     <y>374</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spbControlSize</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>slControlSize</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>303</x>
+     <y>374</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>116</x>
+     <y>368</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>btnControlSizeVisibility</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>widget</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>31</x>
+     <y>343</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>25</x>
+     <y>376</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>btnTreeView</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>btnParentPart</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>119</x>
+     <y>146</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>135</x>
+     <y>245</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>btnTreeView</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>btnDeletePart</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>175</x>
+     <y>145</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>250</x>
+     <y>241</y>
     </hint>
    </hints>
   </connection>
